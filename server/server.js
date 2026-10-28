@@ -1,5 +1,22 @@
 // PrintQR server: website, accounts, keys, shops, print jobs. Zero dependencies (Node 18+).
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
+
+// Load environment variables from .env file if available
+[path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')].some(f => {
+  if (fs.existsSync(f)) {
+    fs.readFileSync(f, 'utf8').split(/\r?\n/).forEach(l => {
+      const m = l.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)?\s*$/);
+      if (m && !m[1].startsWith('#')) {
+        let v = (m[2] || '').trim();
+        if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+        process.env[m[1]] = v;
+      }
+    });
+    return true;
+  }
+  return false;
+});
+
 const PORT=process.env.PORT||3000;
 // ---- EDIT YOUR PRICES (INR) ----
 const DUR={demo:48*36e5,'3m':90*864e5,'6m':180*864e5,'12m':365*864e5};
