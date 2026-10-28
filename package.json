@@ -1,0 +1,10 @@
+{
+  "name": "printqr-site",
+  "version": "1.0.0",
+  "description": "PrintQR website and server",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "license": "MIT"
+}

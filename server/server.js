@@ -9,7 +9,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),crypto=require(
       if (m && !m[1].startsWith('#')) {
         let v = (m[2] || '').trim();
         if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-        process.env[m[1]] = v;
+        if (process.env[m[1]] === undefined) process.env[m[1]] = v;
       }
     });
     return true;
