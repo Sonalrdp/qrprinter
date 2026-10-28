@@ -1,0 +1,27 @@
+{
+ "users": [
+  {
+   "id": "4ff9dea99577",
+   "name": "Admin",
+   "email": "admin@printqr.local",
+   "salt": "352ff82aaf6f3955",
+   "hash": "d475c17b5bcc5cf8243de2a81c9777eca4ff1a47c4b76555668c28e86f860634",
+   "demoUsed": true,
+   "isAdmin": true
+  }
+ ],
+ "sessions": {
+  "3c7cdefe4f949310efeb49e798831f60c8dca38470b3e79d": "4ff9dea99577",
+  "0b51309a6cdb995c922a22c782a82f3b64adee31b1a0bfd9": "4ff9dea99577"
+ },
+ "keys": [],
+ "shops": [],
+ "jobs": [],
+ "settings": {
+  "prices": {
+   "3m": 299,
+   "6m": 549,
+   "12m": 999
+  }
+ }
+}
