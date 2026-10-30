@@ -84,7 +84,7 @@ http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x'),p=u.pathname,m=req.method;
   const J=(o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
   try{
-    if(p==='/api/razorpay/webhook'&&m==='POST')return webhook(req,res);
+    if((p==='/api/razorpay/webhook'||p==='/api/webhook/razorpay'||(p==='/'&&req.headers['x-razorpay-signature']))&&m==='POST')return webhook(req,res);
     if(p.startsWith('/api/')){
       const b=m==='POST'?await body(req):{};
       const me=db.users.find(x=>x.id===db.sessions[(req.headers.authorization||'').replace('Bearer ','')]);
