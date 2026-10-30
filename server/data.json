@@ -4,8 +4,8 @@
    "id": "4ff9dea99577",
    "name": "Admin",
    "email": "admin@printqr.local",
-   "salt": "261c9bd0df6833df",
-   "hash": "4a28dd26c8515524a54ece4ab328e8cc2de821fc6543ed6c54ae442db8c101e9",
+   "salt": "5a03b645118ebc02",
+   "hash": "b4cd2f31fb9a333ffcd3a2226af13f8f09eb6d43e1b5111817aa9c0f939659d4",
    "demoUsed": true,
    "isAdmin": true
   },
@@ -19,6 +19,17 @@
    "rzpKeyId": "rzp_test_UserKey123456",
    "rzpKeySecret": "UserSecretKey789abc",
    "rzpWebhookSecret": "UserWhSecret999"
+  },
+  {
+   "id": "b6e6f5f7424b",
+   "name": "Rohan Sharma",
+   "email": "shopkeeper_8rjhn@test.com",
+   "salt": "d320f494a172e8a0",
+   "hash": "5ca941f78ebdd91742ffa8b369c645e850cea10d28fd9f510310bb3025691055",
+   "demoUsed": true,
+   "rzpKeyId": "rzp_test_UserKey123456",
+   "rzpKeySecret": "UserSecretKey789abc",
+   "rzpWebhookSecret": "UserWhSecret999"
   }
  ],
  "sessions": {
@@ -27,7 +38,9 @@
   "87633b7f78b66937bd7ba0df3955b2a7b60eb94fe32ef761": "4ff9dea99577",
   "4271bdbf9b1fd0485d0a02323fd19b429683357c4659e310": "4ff9dea99577",
   "d32ec933fdf7ef9cdc4d07a48770773e884de615006cb7f6": "9e685457a630",
-  "2c1e824cd80e53e6cb720dfbdd64e123cd82f6ea904ba67a": "4ff9dea99577"
+  "2c1e824cd80e53e6cb720dfbdd64e123cd82f6ea904ba67a": "4ff9dea99577",
+  "63b76f701e1a642249bc8999918005da155064a652d43cab": "b6e6f5f7424b",
+  "53c8f70f0452e150e56d4899c9bfcf4562efffa511a98582": "4ff9dea99577"
  },
  "keys": [
   {
@@ -60,6 +73,16 @@
    "activatedAt": 1793397001514,
    "expiresAt": 1793569801514,
    "shopId": "8fff086e"
+  },
+  {
+   "key": "PQR-FD18-0BCD-20AD",
+   "userId": "b6e6f5f7424b",
+   "plan": "demo",
+   "price": 0,
+   "createdAt": 1793397733285,
+   "activatedAt": 1793397733290,
+   "expiresAt": 1793570533290,
+   "shopId": "7f7e96a2"
   }
  ],
  "shops": [
@@ -116,6 +139,34 @@
    "rzpWebhookSecret": "UserWhSecret999",
    "ownerName": "Rohan Sharma",
    "phone": "9876543210"
+  },
+  {
+   "id": "7f7e96a2",
+   "keyId": "PQR-FD18-0BCD-20AD",
+   "name": "Rohan's Xerox Corner",
+   "mode": "default",
+   "upi": "rohan@okhdfcbank",
+   "rates": {
+    "bw": 3,
+    "color": 12
+   },
+   "defaults": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "slots": {
+    "bw": "",
+    "color": "",
+    "duplex": "",
+    "photo": ""
+   },
+   "rzpKeyId": "rzp_test_UserKey123456",
+   "rzpKeySecret": "UserSecretKey789abc",
+   "rzpWebhookSecret": "UserWhSecret999",
+   "ownerName": "Rohan Sharma",
+   "phone": "9876543210"
   }
  ],
  "jobs": [
@@ -148,6 +199,21 @@
    "amount": 24,
    "status": "created",
    "createdAt": 1793397001526
+  },
+  {
+   "id": "28b18848c7",
+   "shopId": "7f7e96a2",
+   "filename": "document.pdf",
+   "options": {
+    "color": "col",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "pages": 2,
+   "amount": 24,
+   "status": "created",
+   "createdAt": 1793397733306
   }
  ],
  "orders": [

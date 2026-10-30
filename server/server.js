@@ -1,5 +1,5 @@
 // PrintQR server: website, accounts, keys, shops, print jobs. Zero dependencies (Node 18+).
-const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto');
+const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),zlib=require('zlib');
 
 // Load environment variables from .env file if available
 [path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')].some(f => {
@@ -164,10 +164,109 @@ async function webhook(req,res){
 function count(range,total){if(!range)return total;const set=new Set();range.split(',').forEach(p=>{const m=p.trim().match(/^(\d+)(?:-(\d+))?$/);if(!m)return;let a=+m[1],b=+(m[2]||m[1]);for(let i=a;i<=Math.min(b,total);i++)if(i>0)set.add(i)});return set.size||total}
 const ext={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.zip':'application/zip','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 
+function makeZipBuffer(files){
+  const parts=[],cdParts=[];let offset=0;
+  for(const f of files){
+    const nameBuf=Buffer.from(f.name);
+    const dataBuf=Buffer.isBuffer(f.data)?f.data:Buffer.from(f.data);
+    const crc=zlib.crc32(dataBuf);
+    const comp=zlib.deflateRawSync(dataBuf);
+    const useComp=comp.length<dataBuf.length;
+    const finalData=useComp?comp:dataBuf;
+    const method=useComp?8:0;
+
+    const lh=Buffer.alloc(30);
+    lh.writeUInt32LE(0x04034b50,0);
+    lh.writeUInt16LE(20,4);
+    lh.writeUInt16LE(0,6);
+    lh.writeUInt16LE(method,8);
+    lh.writeUInt16LE(0,10);
+    lh.writeUInt16LE(0,12);
+    lh.writeUInt32LE(crc,14);
+    lh.writeUInt32LE(finalData.length,18);
+    lh.writeUInt32LE(dataBuf.length,22);
+    lh.writeUInt16LE(nameBuf.length,26);
+    lh.writeUInt16LE(0,28);
+    parts.push(lh,nameBuf,finalData);
+
+    const cd=Buffer.alloc(46);
+    cd.writeUInt32LE(0x02014b50,0);
+    cd.writeUInt16LE(20,4);
+    cd.writeUInt16LE(20,6);
+    cd.writeUInt16LE(0,8);
+    cd.writeUInt16LE(method,10);
+    cd.writeUInt16LE(0,12);
+    cd.writeUInt16LE(0,14);
+    cd.writeUInt32LE(crc,16);
+    cd.writeUInt32LE(finalData.length,20);
+    cd.writeUInt32LE(dataBuf.length,24);
+    cd.writeUInt16LE(nameBuf.length,28);
+    cd.writeUInt16LE(0,30);
+    cd.writeUInt16LE(0,32);
+    cd.writeUInt16LE(0,34);
+    cd.writeUInt16LE(0,36);
+    cd.writeUInt32LE(0,38);
+    cd.writeUInt32LE(offset,42);
+    cdParts.push(cd,nameBuf);
+    offset+=lh.length+nameBuf.length+finalData.length;
+  }
+  const cdBuf=Buffer.concat(cdParts);
+  const eocd=Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50,0);
+  eocd.writeUInt16LE(0,4);
+  eocd.writeUInt16LE(0,6);
+  eocd.writeUInt16LE(files.length,8);
+  eocd.writeUInt16LE(files.length,10);
+  eocd.writeUInt32LE(cdBuf.length,12);
+  eocd.writeUInt32LE(offset,16);
+  eocd.writeUInt16LE(0,20);
+  return Buffer.concat([...parts,cdBuf,eocd]);
+}
+
+function buildAgentZip(serverUrl){
+  const agentDir=path.join(__dirname,'..','agent');
+  const files=[];
+  ['package.json','agent.js','ui.html','install-and-run.bat'].forEach(n=>{
+    const p=path.join(agentDir,n);
+    if(fs.existsSync(p))files.push({name:'PrintQR-Agent/'+n,data:fs.readFileSync(p)});
+  });
+  files.push({name:'PrintQR-Agent/server_url.txt',data:Buffer.from(serverUrl)});
+  files.push({name:'PrintQR-Agent/config.json',data:Buffer.from(JSON.stringify({serverUrl,autoConfigured:true},null,2))});
+  return makeZipBuffer(files);
+}
+
+function getPublicServerUrl(req,u){
+  const originQuery=u&&u.searchParams&&u.searchParams.get('origin');
+  if(originQuery&&/^https?:\/\//i.test(originQuery))return originQuery.replace(/\/+$/,'');
+  if(process.env.PUBLIC_SERVER_URL)return process.env.PUBLIC_SERVER_URL.replace(/\/+$/,'');
+  if(process.env.SERVER_URL)return process.env.SERVER_URL.replace(/\/+$/,'');
+  const proto=(req.headers['x-forwarded-proto']||(req.socket.encrypted?'https':'http')).split(',')[0].trim();
+  const host=(req.headers['x-forwarded-host']||req.headers.host||('localhost:'+PORT)).split(',')[0].trim();
+  return proto+'://'+host;
+}
+
+// Update static agent zip on disk at startup
+try{
+  const dlDir=path.join(PUB,'downloads');
+  fs.mkdirSync(dlDir,{recursive:true});
+  fs.writeFileSync(path.join(dlDir,'PrintQR-Agent.zip'),buildAgentZip('http://localhost:'+PORT));
+}catch(e){}
+
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x'),p=u.pathname,m=req.method;
   const J=(o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
   try{
+    if(p==='/downloads/PrintQR-Agent.zip'||p==='/api/download-agent'){
+      const srvUrl=getPublicServerUrl(req,u);
+      const zipBuf=buildAgentZip(srvUrl);
+      res.writeHead(200,{
+        'Content-Type':'application/zip',
+        'Content-Disposition':'attachment; filename="PrintQR-Agent.zip"',
+        'Content-Length':zipBuf.length,
+        'Cache-Control':'no-cache, no-store, must-revalidate'
+      });
+      return res.end(zipBuf);
+    }
     if((p==='/api/razorpay/webhook'||p==='/api/webhook/razorpay'||(p==='/'&&req.headers['x-razorpay-signature']))&&m==='POST')return webhook(req,res);
     if(p.startsWith('/api/')){
       const b=m==='POST'?await body(req):{};

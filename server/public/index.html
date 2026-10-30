@@ -434,8 +434,8 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 <section class="dsec"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
 <section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
 <section class="dsec"><h2>Download and install</h2>
-<div class="dl"><a class="btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
-<ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> and the server address when the app asks.</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol></section></main>
+<div class="dl"><a class="btn" id="dl-agent-btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
+<ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> (server address is pre-filled automatically).</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol></section></main>
 <main id="v-cust" hidden></main>
 <main id="v-admin" class="wrap" hidden></main>
 
@@ -614,6 +614,8 @@ async function dash(){
   $('keys').innerHTML=ks.length?ks.map(k=>'<div class="keyrow"><code>'+esc(k.key)+'</code><button class="btn ghost" data-c="'+esc(k.key)+'" style="padding:.45rem .9rem">Copy</button><span class="meta">'+esc(k.planName)+(k.status==='active'?' \u2013 runs until '+fmt(k.expiresAt):k.status==='expired'?' \u2013 ended '+fmt(k.expiresAt):' \u2013 timer starts when you activate')+'</span><span class="pill '+(k.status==='active'?'on':k.status==='expired'?'off':'')+'">'+(k.status==='waiting'?'Not activated':k.status==='active'?'Active':'Expired')+'</span></div>').join('')
     :'<p>No keys yet. Select a plan above and your key will show up here.</p>';
   $('keys').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)});
+  const dl=$('dl-agent-btn')||document.querySelector('.dl a');
+  if(dl)dl.href='/downloads/PrintQR-Agent.zip?origin='+encodeURIComponent(window.location.origin);
 }
 /* ---- customer ---- */
 function rzpPay(r,done,fail,desc){

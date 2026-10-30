@@ -4,6 +4,19 @@ const QR=require('qrcode'),ptp=require('pdf-to-printer');
 const PORT=4010,DIR=path.join(process.env.APPDATA||os.homedir(),'PrintQR-Agent'),CF=path.join(DIR,'config.json');
 fs.mkdirSync(DIR,{recursive:true});
 let cfg={};try{cfg=JSON.parse(fs.readFileSync(CF))}catch(e){}
+
+// Read bundled server URL if present in agent folder:
+let bundledUrl='';
+try{
+  const uf=path.join(__dirname,'server_url.txt'),cf=path.join(__dirname,'config.json');
+  if(fs.existsSync(uf))bundledUrl=fs.readFileSync(uf,'utf8').trim();
+  else if(fs.existsSync(cf)){const j=JSON.parse(fs.readFileSync(cf,'utf8'));bundledUrl=(j.serverUrl||'').trim()}
+}catch(e){}
+
+// Automatically pre-fill serverUrl if not yet set or not activated:
+if(bundledUrl&&(!cfg.serverUrl||!cfg.key)){
+  cfg.serverUrl=bundledUrl;
+}
 const saveCfg=()=>fs.writeFileSync(CF,JSON.stringify(cfg,null,1));
 const log=[];const note=(t)=>{log.unshift({t:new Date().toLocaleTimeString(),m:t});log.length=Math.min(log.length,12)};
 const remote=async(p,method='GET',b)=>{

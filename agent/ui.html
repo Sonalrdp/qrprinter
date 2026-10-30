@@ -55,6 +55,7 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
   <h1>Enter your activation key</h1>
   <p>You can find it in your PrintQR dashboard, under Your activation keys.</p>
   <label for="srv">Server address</label><input id="srv" value="http://localhost:3000">
+  <small style="display:block;color:var(--mute);margin-top:.35rem;font-size:.85rem">Pre-filled with your PrintQR server. Change only if using a different server.</small>
   <label for="key">Activation key</label><input id="key" placeholder="PQR-XXXX-XXXX-XXXX" autocomplete="off">
   <div class="err" id="aerr"></div>
   <button class="btn" id="abtn">Activate</button>
@@ -128,7 +129,7 @@ const api=async(p,b)=>{const r=await fetch(p,b?{method:'POST',body:JSON.stringif
 async function load(){
   S=await api('/local/state');
   $('act').hidden=S.activated;$('app').hidden=!S.activated;
-  if(!S.activated){if(S.cfg.serverUrl)$('srv').value=S.cfg.serverUrl;return}
+  if(!S.activated){if(S.cfg&&S.cfg.serverUrl)$('srv').value=S.cfg.serverUrl;return}
   const c=S.cfg;$('uname').textContent=c.user.name;$('uemail').textContent=c.user.email;$('av').textContent=c.user.name.slice(0,2).toUpperCase();$('plan').textContent=c.plan;
   $('log').innerHTML='<b>Activity</b>'+(S.log.length?S.log.map(l=>'<div>'+l.t+'  '+l.m.replace(/</g,'&lt;')+'</div>').join(''):'<div>Waiting for print jobs.</div>');
 }
