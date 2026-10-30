@@ -4,8 +4,8 @@
    "id": "4ff9dea99577",
    "name": "Admin",
    "email": "admin@printqr.local",
-   "salt": "5a03b645118ebc02",
-   "hash": "b4cd2f31fb9a333ffcd3a2226af13f8f09eb6d43e1b5111817aa9c0f939659d4",
+   "salt": "62d4ea911ab470c9",
+   "hash": "b03203ad27683530116ac5093533439e482e71ecce33d8e5dbd422b8b27d1626",
    "demoUsed": true,
    "isAdmin": true
   },
@@ -40,7 +40,8 @@
   "d32ec933fdf7ef9cdc4d07a48770773e884de615006cb7f6": "9e685457a630",
   "2c1e824cd80e53e6cb720dfbdd64e123cd82f6ea904ba67a": "4ff9dea99577",
   "63b76f701e1a642249bc8999918005da155064a652d43cab": "b6e6f5f7424b",
-  "53c8f70f0452e150e56d4899c9bfcf4562efffa511a98582": "4ff9dea99577"
+  "53c8f70f0452e150e56d4899c9bfcf4562efffa511a98582": "4ff9dea99577",
+  "9aefdd36075e831a07a36760f05ffe297a51348280f17270": "4ff9dea99577"
  },
  "keys": [
   {

@@ -358,12 +358,26 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 </main></div>
 
 <main id="v-auth" class="wrap" hidden><div class="authgrid"><div><h1 id="authT"></h1><p id="authP" class="lead2"></p></div>
-<form id="authF" novalidate><div id="nmw"><label for="a_name">Your name</label><input id="a_name" autocomplete="name"></div>
-<label for="a_email">Email</label><input id="a_email" type="email" autocomplete="email">
-<label for="a_pw">Password</label><input id="a_pw" type="password" autocomplete="current-password">
-<div class="err" id="a_err" role="alert"></div>
-<button class="btn" id="a_btn" type="submit"></button>
-<p class="swap"><span id="a_sw"></span> <a id="a_lnk" href="#"></a></p></form></div></main>
+<form id="authF" novalidate>
+  <div id="nmw"><label for="a_name">Your name</label><input id="a_name" autocomplete="name"></div>
+  <div id="emw"><label for="a_email" id="a_email_lbl">Email</label><input id="a_email" autocomplete="email"></div>
+  <div id="phw"><label for="a_phone">Mobile number</label><input id="a_phone" type="tel" inputmode="numeric" placeholder="10-digit mobile number" autocomplete="tel"></div>
+  <div id="pww"><label for="a_pw" id="a_pw_lbl">Password</label><input id="a_pw" type="password" autocomplete="current-password"></div>
+  
+  <div id="otpw" hidden style="margin-top:0.8rem">
+    <label for="a_otp" style="font-weight:600">Enter 6-digit OTP</label>
+    <div style="display:flex;gap:0.6rem;align-items:center">
+      <input id="a_otp" inputmode="numeric" maxlength="6" placeholder="123456" style="letter-spacing:4px;font-weight:700;font-size:1.2rem;text-align:center">
+      <button type="button" class="btn ghost" id="resend_otp_btn" style="white-space:nowrap;padding:0.75rem 1rem">Resend OTP</button>
+    </div>
+    <small id="otp_note" style="color:var(--mute);display:block;margin-top:0.35rem">OTP sent to your email.</small>
+  </div>
+
+  <div class="err" id="a_err" role="alert"></div>
+  <div id="fgtw" style="margin-top:0.4rem"><a href="#/forgot" id="forgot_lnk" style="color:var(--mag);font-size:0.9rem;text-decoration:none;font-weight:500">Forgot password?</a></div>
+  <button class="btn" id="a_btn" type="submit"></button>
+  <p class="swap"><span id="a_sw"></span> <a id="a_lnk" href="#"></a></p>
+</form></div></main>
 <main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, get your key, configure Razorpay for customer payments, and install the app on your shop PC.</p></div>
 
 <section class="dsec" id="rzp-sec">
@@ -526,16 +540,138 @@ function nav(){$('navauth').innerHTML=tk()?(localStorage.getItem('pq_admin')==='
   :'<a class="link" href="#/login" style="margin-left:1.6rem;text-decoration:none;color:var(--ink2)">Log in</a> <a class="btn" style="margin-left:1rem;padding:.6rem 1.1rem" href="#/signup">Sign up</a>';
   const lo=$('lo');if(lo)lo.onclick=e=>{e.preventDefault();localStorage.removeItem('pq_token');localStorage.removeItem('pq_admin');location.hash='#/';route()}}
 /* ---- auth ---- */
+let authOtpSent = false;
 function auth(mode){
-  show('auth');const su=mode==='signup';
-  $('authT').textContent=su?'Make your shop account':'Welcome back';
-  $('authP').textContent=su?'Free to sign up. Try the 48-hour demo on your own counter.':'Log in to see your keys and download the app.';
-  $('nmw').hidden=!su;$('a_btn').textContent=su?'Create account':'Log in';
-  $('a_sw').textContent=su?'Already have an account?':'New here?';$('a_lnk').textContent=su?'Log in':'Sign up';$('a_lnk').href=su?'#/login':'#/signup';
-  $('a_err').textContent='';
-  $('authF').onsubmit=async e=>{e.preventDefault();$('a_err').textContent='';
-    try{const r=await api(su?'/api/signup':'/api/login',{name:$('a_name').value.trim(),email:$('a_email').value.trim(),password:$('a_pw').value});
-      localStorage.setItem('pq_token',r.token);r.admin?localStorage.setItem('pq_admin','1'):localStorage.removeItem('pq_admin');location.hash=r.admin?'#/admin':'#/dashboard'}catch(x){$('a_err').textContent=x.message}}
+  show('auth');
+  authOtpSent = false;
+  $('otpw').hidden = true;
+  $('a_otp').value = '';
+  $('a_err').textContent = '';
+  $('a_err').style.color = 'var(--mag)';
+
+  if(mode === 'signup'){
+    $('authT').textContent = 'Make your shop account';
+    $('authP').textContent = 'Free to sign up. Enter your details to receive an OTP and try the 48-hour demo.';
+    $('nmw').hidden = false;
+    $('phw').hidden = false;
+    $('pww').hidden = false;
+    $('fgtw').hidden = true;
+    $('a_email_lbl').textContent = 'Email';
+    $('a_pw_lbl').textContent = 'Password';
+    $('a_btn').textContent = 'Send OTP & Create account';
+    $('a_sw').textContent = 'Already have an account?';
+    $('a_lnk').textContent = 'Log in';
+    $('a_lnk').href = '#/login';
+  } else if(mode === 'forgot'){
+    $('authT').textContent = 'Reset your password';
+    $('authP').textContent = 'Enter your email or phone to receive a 6-digit OTP to reset your password.';
+    $('nmw').hidden = true;
+    $('phw').hidden = true;
+    $('pww').hidden = true;
+    $('fgtw').hidden = true;
+    $('a_email_lbl').textContent = 'Email or Mobile number';
+    $('a_btn').textContent = 'Send Reset OTP';
+    $('a_sw').textContent = 'Remembered your password?';
+    $('a_lnk').textContent = 'Log in';
+    $('a_lnk').href = '#/login';
+  } else { // login
+    $('authT').textContent = 'Welcome back';
+    $('authP').textContent = 'Log in to see your keys, configure Razorpay, and download the app.';
+    $('nmw').hidden = true;
+    $('phw').hidden = true;
+    $('pww').hidden = false;
+    $('fgtw').hidden = false;
+    $('a_email_lbl').textContent = 'Email or Mobile number';
+    $('a_pw_lbl').textContent = 'Password';
+    $('a_btn').textContent = 'Log in';
+    $('a_sw').textContent = 'New here?';
+    $('a_lnk').textContent = 'Sign up';
+    $('a_lnk').href = '#/signup';
+  }
+
+  $('resend_otp_btn').onclick = async () => {
+    $('a_err').textContent = '';
+    const email = $('a_email').value.trim();
+    const phone = $('a_phone').value.trim();
+    const name = $('a_name').value.trim();
+    const purpose = mode === 'forgot' ? 'Forgot Password' : 'Signup';
+    try {
+      await api('/api/otp/send', { email, phone, name, purpose });
+      $('otp_note').textContent = 'New OTP sent to ' + (email || phone) + '!';
+    } catch (e) {
+      $('a_err').textContent = e.message;
+    }
+  };
+
+  $('authF').onsubmit = async e => {
+    e.preventDefault();
+    $('a_err').textContent = '';
+    const name = $('a_name').value.trim();
+    const email = $('a_email').value.trim();
+    const phone = $('a_phone').value.trim();
+    const pass = $('a_pw').value;
+    const otp = $('a_otp').value.trim();
+
+    try {
+      if(mode === 'signup'){
+        if(!authOtpSent){
+          if(!name) throw new Error('Please enter your name.');
+          if(!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Please enter a valid email address.');
+          if(phone.replace(/\D/g,'').length < 10) throw new Error('Please enter a valid 10-digit mobile number.');
+          if(pass.length < 6) throw new Error('Password must be at least 6 characters.');
+
+          $('a_btn').disabled = true;
+          $('a_btn').textContent = 'Sending OTP...';
+          await api('/api/otp/send', { name, email, phone, purpose: 'Signup' });
+          authOtpSent = true;
+          $('otpw').hidden = false;
+          $('otp_note').textContent = '6-digit OTP sent to ' + email + ' (and phone).';
+          $('a_btn').disabled = false;
+          $('a_btn').textContent = 'Verify OTP & Finish Signup';
+          return;
+        }
+
+        if(!otp || otp.length < 6) throw new Error('Please enter the 6-digit OTP sent to your email.');
+        const r = await api('/api/signup', { name, email, phone, password: pass, otp });
+        localStorage.setItem('pq_token', r.token);
+        localStorage.removeItem('pq_admin');
+        location.hash = '#/dashboard';
+      } else if(mode === 'forgot'){
+        if(!authOtpSent){
+          if(!email) throw new Error('Please enter your registered email or mobile number.');
+          $('a_btn').disabled = true;
+          $('a_btn').textContent = 'Sending OTP...';
+          await api('/api/otp/send', { email, purpose: 'Forgot Password' });
+          authOtpSent = true;
+          $('otpw').hidden = false;
+          $('pww').hidden = false;
+          $('a_pw_lbl').textContent = 'New Password (6+ characters)';
+          $('otp_note').textContent = '6-digit OTP sent to ' + email + '.';
+          $('a_btn').disabled = false;
+          $('a_btn').textContent = 'Reset Password';
+          return;
+        }
+
+        if(!otp || otp.length < 6) throw new Error('Please enter the 6-digit OTP.');
+        if(pass.length < 6) throw new Error('New password must be at least 6 characters.');
+        const r = await api('/api/forgot-password', { identifier: email, otp, newPassword: pass });
+        $('a_err').style.color = '#1F7A47';
+        $('a_err').textContent = r.message || 'Password reset! You can now log in.';
+        setTimeout(() => { location.hash = '#/login'; }, 1500);
+      } else { // Login
+        const r = await api('/api/login', { email, password: pass });
+        localStorage.setItem('pq_token', r.token);
+        r.admin ? localStorage.setItem('pq_admin', '1') : localStorage.removeItem('pq_admin');
+        location.hash = r.admin ? '#/admin' : '#/dashboard';
+      }
+    } catch (x) {
+      $('a_err').style.color = 'var(--mag)';
+      $('a_err').textContent = x.message;
+      $('a_btn').disabled = false;
+      if(mode === 'signup' && !authOtpSent) $('a_btn').textContent = 'Send OTP & Create account';
+      if(mode === 'forgot' && !authOtpSent) $('a_btn').textContent = 'Send Reset OTP';
+    }
+  };
 }
 /* ---- dashboard ---- */
 async function dash(){
@@ -718,7 +854,7 @@ async function admin(){
 /* ---- router ---- */
 function route(){nav();const sid=new URLSearchParams(location.search).get('shopId');if(sid)return cust(sid);
   const h=location.hash;
-  if(h==='#/login')auth('login');else if(h==='#/signup')auth('signup');else if(h==='#/dashboard')dash();else if(h==='#/admin')admin();else show('home')}
+  if(h==='#/login')auth('login');else if(h==='#/signup')auth('signup');else if(h==='#/forgot'||h==='#/forgot-password')auth('forgot');else if(h==='#/dashboard')dash();else if(h==='#/admin')admin();else show('home')}
 window.addEventListener('hashchange',()=>{route();if(location.hash.startsWith('#/'))scrollTo(0,0)});route();
 })();
 </script>

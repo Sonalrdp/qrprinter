@@ -22,6 +22,28 @@ const PORT=process.env.PORT||3000;
 const RZP_ID=process.env.RAZORPAY_KEY_ID||'',RZP_SECRET=process.env.RAZORPAY_KEY_SECRET||'',RZP_WH=process.env.RAZORPAY_WEBHOOK_SECRET||'';
 const RZP_ON=!!(RZP_ID&&RZP_SECRET),RZP_TEST=RZP_ID.startsWith('rzp_test_');
 const FEE_PCT=Math.max(0,Math.min(50,Number(process.env.PLATFORM_FEE_PERCENT)||0)); // your cut of each print payment
+const GS_URL=(process.env.GOOGLE_SCRIPT_URL||'').trim();
+
+// In-memory OTP storage: key = email or phone, val = { otp, expiresAt }
+const otpStore=new Map();
+const createOTP=k=>{const o=String(Math.floor(100000+Math.random()*900000));otpStore.set(k,{otp:o,expiresAt:Date.now()+6e5});return o};
+const verifyOTPLocal=(k,o)=>{const e=otpStore.get(k);if(!e)return false;if(Date.now()>e.expiresAt){otpStore.delete(k);return false}if(e.otp===String(o).trim()){otpStore.delete(k);return true}return false};
+
+const syncToGoogleScript=async(action,payload)=>{
+  if(!GS_URL)return null;
+  try{
+    const r=await fetch(GS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,...payload}),
+      redirect:'follow'
+    });
+    return await r.json().catch(()=>({}));
+  }catch(e){
+    console.warn('[Google Script Sync Warning]', e.message);
+    return null;
+  }
+};
 
 function getShopRzpKeys(shop){
   if(shop){
@@ -103,7 +125,13 @@ const live=k=>k&&k.expiresAt&&Date.now()<k.expiresAt;
 const shopActive=s=>live(db.keys.find(k=>k.key===s.keyId));
 const pub=s=>({id:s.id,name:s.name,mode:s.mode,defaults:s.defaults,rates:s.rates,upi:s.upi,active:shopActive(s),hasCustomRzp:!!(s.rzpKeyId&&s.rzpKeySecret)});
 const full=s=>({...pub(s),slots:s.slots,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!(s.linkedAccountId||(s.rzpKeyId&&s.rzpKeySecret)),rzpKeyId:s.rzpKeyId||'',hasRzpSecret:!!s.rzpKeySecret,rzpWebhookSecret:s.rzpWebhookSecret||''});
-function newKey(userId,plan,price,extra){const k={key:'PQR-'+[0,1,2].map(()=>rid(2).toUpperCase()).join('-'),userId,plan,price,createdAt:Date.now(),...extra};db.keys.push(k);return k}
+function newKey(userId,plan,price,extra){
+  const k={key:'PQR-'+[0,1,2].map(()=>rid(2).toUpperCase()).join('-'),userId,plan,price,createdAt:Date.now(),...extra};
+  db.keys.push(k);
+  const u=db.users.find(x=>x.id===userId);
+  syncToGoogleScript('add_key',{key:{...k,userEmail:u?u.email:'',planName:NAMES[plan]}});
+  return k;
+}
 async function createOrder(o,receipt,transfers,keys){
   const activeKeys=keys||(RZP_ON?{keyId:RZP_ID,keySecret:RZP_SECRET}:null);
   try{
@@ -126,7 +154,7 @@ async function createOrder(o,receipt,transfers,keys){
 function settleOrder(o,paymentId){
   if(o.status==='paid')return;
   if(o.kind==='plan'){const k=newKey(o.userId,o.plan,o.amount/100,{paymentId});o.keyId=k.key}
-  else{const j=db.jobs.find(x=>x.id===o.jobId);if(j&&j.status==='created')j.status='paid'}
+  else{const j=db.jobs.find(x=>x.id===o.jobId);if(j&&j.status==='created'){j.status='paid';syncToGoogleScript('update_print_job',{id:j.id,status:'paid'})}}
   o.status='paid';o.paymentId=paymentId;save();
 }
 async function webhook(req,res){
@@ -316,22 +344,123 @@ http.createServer(async(req,res)=>{
           }
         });
         save();
+        syncToGoogleScript('update_rzp',{
+          email:me.email,
+          rzpKeyId:me.rzpKeyId,
+          rzpKeySecret:me.rzpKeySecret,
+          rzpWebhookSecret:me.rzpWebhookSecret
+        });
         return J({ok:1,isConfigured:true,keyId:me.rzpKeyId,webhookSecret:me.rzpWebhookSecret||''});
+      }
+      if(p==='/api/otp/send'&&m==='POST'){
+        const email=(b.email||'').trim().toLowerCase();
+        const phone=String(b.phone||'').trim();
+        const name=(b.name||'Valued User').trim();
+        const purpose=(b.purpose||'Verification').trim();
+        if(!email&&!phone)return J({error:'Email or mobile number is required.'},400);
+
+        const key=email||phone;
+        const otp=createOTP(key);
+        if(phone&&email)otpStore.set(phone,{otp,expiresAt:Date.now()+6e5});
+
+        // Send OTP to email via Google Apps Script MailApp
+        if(GS_URL&&email){
+          syncToGoogleScript('send_otp',{email,phone,name,purpose});
+        }else{
+          console.log(`[OTP NOTICE] Generated OTP ${otp} for ${email||phone} (${purpose})`);
+        }
+        return J({ok:1,message:'OTP sent to your email.'});
+      }
+      if(p==='/api/otp/verify'&&m==='POST'){
+        const ident=((b.email||b.phone||'').trim()).toLowerCase();
+        const enteredOtp=String(b.otp||'').trim();
+        if(!ident||!enteredOtp)return J({error:'Enter the OTP.'},400);
+
+        let valid=false;
+        if(GS_URL){
+          const gsRes=await syncToGoogleScript('verify_otp',{email:b.email,phone:b.phone,otp:enteredOtp});
+          if(gsRes&&gsRes.ok)valid=true;
+        }
+        if(!valid&&verifyOTPLocal(ident,enteredOtp))valid=true;
+        if(!valid&&(b.email&&verifyOTPLocal(b.email.toLowerCase(),enteredOtp)))valid=true;
+        if(!valid&&(b.phone&&verifyOTPLocal(b.phone,enteredOtp)))valid=true;
+
+        if(!valid)return J({error:'Invalid or expired OTP. Please try again.'},400);
+        return J({ok:1,verified:true});
       }
       if(p==='/api/signup'&&m==='POST'){
         if(!b.name||!/^\S+@\S+\.\S+$/.test(b.email||'')||(b.password||'').length<6)return J({error:'Enter your name, a valid email and a password of 6+ characters.'},400);
-        const email=b.email.toLowerCase();
-        if(db.users.find(x=>x.email===email))return J({error:'This email already has an account. Log in instead.'},400);
-        const salt=rid(8),usr={id:rid(6),name:b.name,email,salt,hash:hash(b.password,salt),demoUsed:false};
-        db.users.push(usr);const t=rid(24);db.sessions[t]=usr.id;save();return J({token:t});
+        const email=b.email.toLowerCase().trim();
+        const phone=String(b.phone||'').trim();
+        if(!phone||phone.length<10)return J({error:'Please enter a valid 10-digit mobile number.'},400);
+
+        const enteredOtp=String(b.otp||'').trim();
+        if(!enteredOtp)return J({error:'Please enter the OTP sent to your email.'},400);
+
+        let otpValid=false;
+        if(GS_URL){
+          const gsRes=await syncToGoogleScript('verify_otp',{email,phone,otp:enteredOtp});
+          if(gsRes&&gsRes.ok)otpValid=true;
+        }
+        if(!otpValid&&verifyOTPLocal(email,enteredOtp))otpValid=true;
+        if(!otpValid&&verifyOTPLocal(phone,enteredOtp))otpValid=true;
+
+        if(!otpValid)return J({error:'Invalid or expired OTP. Please verify and try again.'},400);
+
+        if(db.users.find(x=>x.email===email||(phone&&x.phone===phone)))return J({error:'This email or phone already has an account. Log in instead.'},400);
+
+        const salt=rid(8),usr={id:rid(6),name:b.name.trim(),email,phone,salt,hash:hash(b.password,salt),demoUsed:false,rzpKeyId:'',rzpKeySecret:'',rzpWebhookSecret:''};
+        db.users.push(usr);
+        const t=rid(24);
+        db.sessions[t]=usr.id;
+        save();
+
+        // Dual-storage: record user in Google Sheet
+        syncToGoogleScript('signup_user',{user:usr});
+
+        return J({token:t});
+      }
+      if(p==='/api/forgot-password'&&m==='POST'){
+        const ident=(b.identifier||b.email||b.phone||'').trim().toLowerCase();
+        const enteredOtp=String(b.otp||'').trim();
+        const newPass=String(b.newPassword||'');
+        if(!ident)return J({error:'Enter your email or mobile number.'},400);
+        if(!enteredOtp)return J({error:'Enter the OTP.'},400);
+        if(newPass.length<6)return J({error:'New password must be at least 6 characters.'},400);
+
+        let otpValid=false;
+        if(GS_URL){
+          const gsRes=await syncToGoogleScript('verify_otp',{email:ident,phone:ident,otp:enteredOtp});
+          if(gsRes&&gsRes.ok)otpValid=true;
+        }
+        if(!otpValid&&verifyOTPLocal(ident,enteredOtp))otpValid=true;
+
+        if(!otpValid)return J({error:'Invalid or expired OTP.'},400);
+
+        let usr=db.users.find(x=>!x.isAdmin&&(x.email===ident||(x.phone&&x.phone===ident)));
+        if(!usr&&GS_URL){
+          const gsUser=await syncToGoogleScript('get_user',{email:ident,phone:ident});
+          if(gsUser&&gsUser.user){
+            usr=gsUser.user;
+            db.users.push(usr);
+          }
+        }
+        if(!usr)return J({error:'No account found with this email or phone.'},404);
+
+        usr.salt=rid(8);
+        usr.hash=hash(newPass,usr.salt);
+        save();
+
+        syncToGoogleScript('reset_password',{email:usr.email,phone:usr.phone,hash:usr.hash,salt:usr.salt});
+        return J({ok:1,message:'Password reset successful! You can now log in.'});
       }
       if(p==='/api/login'&&m==='POST'){
-        const email = (b.email || '').trim().toLowerCase();
+        const ident = (b.email || b.phone || '').trim().toLowerCase();
         const pass = String(b.password || '');
 
         // If credentials in .env are configured for admin, enforce strictly with .env id and password:
         if (ADMIN_EMAIL && ADMIN_PASSWORD) {
-          if (email === ADMIN_EMAIL) {
+          if (ident === ADMIN_EMAIL) {
             // Must match the exact password from .env, NEVER any default or old password
             if (pass !== ADMIN_PASSWORD) {
               return J({ error: 'Email or password is wrong.' }, 401);
@@ -348,7 +477,34 @@ http.createServer(async(req,res)=>{
           }
         }
 
-        const usr = db.users.find(x => x.email === email && !x.isAdmin);
+        let usr = db.users.find(x => !x.isAdmin && (x.email === ident || (x.phone && x.phone === ident)));
+        // Dual-storage fallback: if user not found in local server data, query Google Sheet!
+        if (!usr && GS_URL) {
+          try {
+            const gsUser = await syncToGoogleScript('get_user', { email: ident, phone: ident });
+            if (gsUser && gsUser.user) {
+              const u = gsUser.user;
+              usr = {
+                id: u.id || rid(6),
+                name: u.name || 'User',
+                email: u.email,
+                phone: u.phone || '',
+                salt: u.salt,
+                hash: u.hash,
+                demoUsed: !!u.demoUsed,
+                rzpKeyId: u.rzpKeyId || '',
+                rzpKeySecret: u.rzpKeySecret || '',
+                rzpWebhookSecret: u.rzpWebhookSecret || ''
+              };
+              db.users.push(usr);
+              save();
+              console.log(`[Dual-Storage Recovery] Restored user ${usr.email} from Google Sheet!`);
+            }
+          } catch (e) {
+            console.warn('[Google Sheet Recovery Error]', e.message);
+          }
+        }
+
         if (!usr || usr.hash !== hash(pass, usr.salt)) return J({ error: 'Email or password is wrong.' }, 401);
         const t = rid(24);
         db.sessions[t] = usr.id;
@@ -430,7 +586,9 @@ http.createServer(async(req,res)=>{
       }
       if((r=p.match(/^\/api\/agent\/jobs\/(\w+)$/))&&m==='POST'){
         if(!ashop)return J({error:'Key not valid'},401);
-        const j=db.jobs.find(x=>x.id===r[1]&&x.shopId===ashop.id);if(j){j.status=b.status==='printed'?'printed':'failed';save()}return J({ok:1});
+        const j=db.jobs.find(x=>x.id===r[1]&&x.shopId===ashop.id);
+        if(j){j.status=b.status==='printed'?'printed':'failed';save();syncToGoogleScript('update_print_job',{id:j.id,status:j.status});}
+        return J({ok:1});
       }
       if((r=p.match(/^\/api\/shop\/(\w+)$/))){const s=db.shops.find(x=>x.id===r[1]);return s?J(pub(s)):J({error:'Shop not found'},404)}
       if((r=p.match(/^\/api\/shop\/(\w+)\/jobs$/))&&m==='POST'){
@@ -442,7 +600,9 @@ http.createServer(async(req,res)=>{
         const o=s.mode==='locked'?{...s.defaults}:{color:b.options?.color==='col'?'col':'bw',copies:Math.min(99,Math.max(1,parseInt(b.options?.copies)||1)),duplex:!!b.options?.duplex,range:/^[0-9,\-\s]*$/.test(b.options?.range||'')?(b.options.range||''):''};
         const total=Math.max(1,parseInt(b.pages)||1),n=count(o.range,total);
         const j={id:rid(5),shopId:s.id,filename:String(b.filename||'file.pdf').slice(0,80),options:o,pages:n,amount:n*o.copies*(o.color==='col'?s.rates.color:s.rates.bw),status:'created',createdAt:Date.now()};
-        fs.writeFileSync(path.join(UP,j.id+'.pdf'),buf);db.jobs.push(j);save();return J({id:j.id,amount:j.amount,pages:n});
+        fs.writeFileSync(path.join(UP,j.id+'.pdf'),buf);db.jobs.push(j);save();
+        syncToGoogleScript('add_print_job',{job:{...j,shopName:s.name,color:o.color,copies:o.copies}});
+        return J({id:j.id,amount:j.amount,pages:n});
       }
       if((r=p.match(/^\/api\/jobs\/(\w+)$/))){const j=db.jobs.find(x=>x.id===r[1]);return j?J({status:j.status,amount:j.amount}):J({error:'No job'},404)}
       if((r=p.match(/^\/api\/jobs\/(\w+)\/pay$/))&&m==='POST'){
