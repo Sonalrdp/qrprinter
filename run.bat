@@ -13,9 +13,7 @@ if errorlevel 1 (
         exit /b 1
     )
 )
-rem === Set your admin login here BEFORE first start ===
-set ADMIN_EMAIL=admin@printqr.local
-set ADMIN_PASSWORD=admin123
+rem Admin login credentials are configured in your .env file
 echo Starting PrintQR website at http://localhost:3000
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:3000"
 node server.js

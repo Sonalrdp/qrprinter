@@ -9,7 +9,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),crypto=require(
       if (m && !m[1].startsWith('#')) {
         let v = (m[2] || '').trim();
         if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-        if (process.env[m[1]] === undefined) process.env[m[1]] = v;
+        process.env[m[1]] = v;
       }
     });
     return true;
@@ -43,11 +43,26 @@ const hash=(p,s)=>crypto.scryptSync(p,s,32).toString('hex');
 // Plan prices (INR). Admin can change them from the admin dashboard.
 db.settings=db.settings||{};
 const PRICES=db.settings.prices=Object.assign({'3m':999,'6m':1799,'12m':2999},db.settings.prices||{});
-// Admin account. Set ADMIN_EMAIL and ADMIN_PASSWORD before first start.
-if(!db.users.find(x=>x.isAdmin)){
-  const salt=rid(8),em=(process.env.ADMIN_EMAIL||'admin@printqr.local').toLowerCase(),pw=process.env.ADMIN_PASSWORD||'admin123';
-  db.users.push({id:rid(6),name:'Admin',email:em,salt,hash:hash(pw,salt),demoUsed:true,isAdmin:true});save();
-  console.log('Admin account created: '+em+(process.env.ADMIN_PASSWORD?'':'  password: admin123  (CHANGE THIS: set ADMIN_PASSWORD and delete data.json)'));
+// Admin account management: strictly synchronized with .env credentials.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD !== undefined ? String(process.env.ADMIN_PASSWORD).trim() : '';
+
+if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+  let adminUser = db.users.find(x => x.isAdmin || x.email === ADMIN_EMAIL);
+  if (!adminUser) {
+    adminUser = { id: rid(6), name: 'Admin', email: ADMIN_EMAIL, demoUsed: true, isAdmin: true };
+    db.users.push(adminUser);
+  }
+  adminUser.email = ADMIN_EMAIL;
+  adminUser.isAdmin = true;
+  adminUser.salt = rid(8);
+  adminUser.hash = hash(ADMIN_PASSWORD, adminUser.salt);
+  save();
+  console.log('Admin account locked to .env credentials: ' + ADMIN_EMAIL);
+} else if (!db.users.find(x => x.isAdmin)) {
+  const salt = rid(8), em = 'admin@printqr.local', pw = 'admin123';
+  db.users.push({ id: rid(6), name: 'Admin', email: em, salt, hash: hash(pw, salt), demoUsed: true, isAdmin: true });
+  save();
 }
 const body=req=>new Promise((ok,no)=>{let c=[],n=0;req.on('data',d=>{n+=d.length;if(n>40e6){no(new Error('File too large'));req.destroy();return}c.push(d)});req.on('end',()=>{try{ok(JSON.parse(Buffer.concat(c).toString()||'{}'))}catch(e){ok({})}})});
 const live=k=>k&&k.expiresAt&&Date.now()<k.expiresAt;
@@ -109,9 +124,34 @@ http.createServer(async(req,res)=>{
         db.users.push(usr);const t=rid(24);db.sessions[t]=usr.id;save();return J({token:t});
       }
       if(p==='/api/login'&&m==='POST'){
-        const usr=db.users.find(x=>x.email===(b.email||'').toLowerCase());
-        if(!usr||usr.hash!==hash(b.password||'',usr.salt))return J({error:'Email or password is wrong.'},401);
-        const t=rid(24);db.sessions[t]=usr.id;save();return J({token:t,admin:!!usr.isAdmin});
+        const email = (b.email || '').trim().toLowerCase();
+        const pass = String(b.password || '');
+
+        // If credentials in .env are configured for admin, enforce strictly with .env id and password:
+        if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+          if (email === ADMIN_EMAIL) {
+            // Must match the exact password from .env, NEVER any default or old password
+            if (pass !== ADMIN_PASSWORD) {
+              return J({ error: 'Email or password is wrong.' }, 401);
+            }
+            let adminUser = db.users.find(x => x.isAdmin || x.email === ADMIN_EMAIL);
+            if (!adminUser) {
+              adminUser = { id: rid(6), name: 'Admin', email: ADMIN_EMAIL, salt: rid(8), hash: hash(ADMIN_PASSWORD, rid(8)), demoUsed: true, isAdmin: true };
+              db.users.push(adminUser);
+            }
+            const t = rid(24);
+            db.sessions[t] = adminUser.id;
+            save();
+            return J({ token: t, admin: true });
+          }
+        }
+
+        const usr = db.users.find(x => x.email === email && !x.isAdmin);
+        if (!usr || usr.hash !== hash(pass, usr.salt)) return J({ error: 'Email or password is wrong.' }, 401);
+        const t = rid(24);
+        db.sessions[t] = usr.id;
+        save();
+        return J({ token: t, admin: !!usr.isAdmin });
       }
       if(p==='/api/me'){if(!me)return J({error:'Log in first'},401);return J({name:me.name,email:me.email,demoUsed:me.demoUsed,prices:PRICES,names:NAMES})}
       if(p==='/api/buy'&&m==='POST'){

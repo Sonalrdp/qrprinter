@@ -4,24 +4,102 @@
    "id": "4ff9dea99577",
    "name": "Admin",
    "email": "admin@printqr.local",
-   "salt": "352ff82aaf6f3955",
-   "hash": "d475c17b5bcc5cf8243de2a81c9777eca4ff1a47c4b76555668c28e86f860634",
+   "salt": "346575c46e98ba59",
+   "hash": "4492c20f1a1a7d1238fb48b29803941e2e452d19a872fe074d23e07ef1418eb3",
    "demoUsed": true,
    "isAdmin": true
   }
  ],
  "sessions": {
   "3c7cdefe4f949310efeb49e798831f60c8dca38470b3e79d": "4ff9dea99577",
-  "0b51309a6cdb995c922a22c782a82f3b64adee31b1a0bfd9": "4ff9dea99577"
+  "0b51309a6cdb995c922a22c782a82f3b64adee31b1a0bfd9": "4ff9dea99577",
+  "87633b7f78b66937bd7ba0df3955b2a7b60eb94fe32ef761": "4ff9dea99577",
+  "4271bdbf9b1fd0485d0a02323fd19b429683357c4659e310": "4ff9dea99577"
  },
- "keys": [],
- "shops": [],
- "jobs": [],
+ "keys": [
+  {
+   "key": "PQR-64E4-EFA0-AD5D",
+   "userId": "4ff9dea99577",
+   "plan": "3m",
+   "price": 1,
+   "createdAt": 1793389492723,
+   "paymentId": "pay_TuEuikCkAoFhfA",
+   "activatedAt": 1793389575261,
+   "expiresAt": 1801165575261,
+   "shopId": "f38ad7c4"
+  }
+ ],
+ "shops": [
+  {
+   "id": "f38ad7c4",
+   "keyId": "PQR-64E4-EFA0-AD5D",
+   "name": "Admin's shop",
+   "mode": "locked",
+   "upi": "9135779897@hdfb",
+   "rates": {
+    "bw": 2,
+    "color": 10
+   },
+   "defaults": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "slots": {
+    "bw": "Microsoft Print to PDF",
+    "color": "",
+    "duplex": "",
+    "photo": ""
+   },
+   "ownerName": "Ankit singh",
+   "phone": "8235066919",
+   "rzpFor": "9135779897@hdfb|Ankit singh|8235066919"
+  }
+ ],
+ "jobs": [
+  {
+   "id": "8d1797016d",
+   "shopId": "f38ad7c4",
+   "filename": "Screenshot_2026-10-30-23-50-29-38_1c337646f29875672b5a61192b9010f9.pdf",
+   "options": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "pages": 1,
+   "amount": 2,
+   "status": "created",
+   "createdAt": 1793390359529
+  }
+ ],
+ "orders": [
+  {
+   "kind": "plan",
+   "userId": "4ff9dea99577",
+   "plan": "3m",
+   "amount": 100,
+   "status": "paid",
+   "createdAt": 1793389439621,
+   "id": "order_TuEu3Q1YQ9y1ce",
+   "keyId": "PQR-64E4-EFA0-AD5D",
+   "paymentId": "pay_TuEuikCkAoFhfA"
+  },
+  {
+   "kind": "job",
+   "jobId": "8d1797016d",
+   "amount": 200,
+   "status": "created",
+   "createdAt": 1793390359647,
+   "id": "order_TuFAFnVw0d2XIr"
+  }
+ ],
  "settings": {
   "prices": {
-   "3m": 299,
-   "6m": 549,
-   "12m": 999
+   "3m": 1,
+   "6m": 2,
+   "12m": 3
   }
  }
 }
