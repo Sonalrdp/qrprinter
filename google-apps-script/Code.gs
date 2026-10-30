@@ -440,3 +440,116 @@ function installWeeklySundayTrigger() {
 
   console.log('Sunday 11:00 PM IST trigger created successfully!');
 }
+
+// -------------------------------------------------------------
+// CUSTOM SPREADSHEET MENU (Appears automatically in Google Sheets toolbar)
+// -------------------------------------------------------------
+
+/**
+ * Runs automatically when the Google Sheet is opened
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('⚡ PrintQR Tools')
+    .addItem('🛠️ 1. Setup All Sheets & Headers', 'menuSetupSheets')
+    .addItem('⏰ 2. Install Sunday 11 PM Email Trigger', 'menuInstallTrigger')
+    .addSeparator()
+    .addItem('📧 3. Trigger PrintJobs Email Now (Test)', 'menuTriggerEmailNow')
+    .addItem('🧪 4. Send Test OTP Email', 'menuSendTestOtp')
+    .addToUi();
+}
+
+/**
+ * Menu Option 1: Setup all 4 sheets (Users, Keys, Logs, PrintJobs) with headers
+ */
+function menuSetupSheets() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    initAllSheets();
+    ui.alert(
+      'Setup Complete',
+      '✓ All 4 sheets (Users, Keys, Logs, PrintJobs) are initialized with formatted headers and frozen rows.',
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    ui.alert('Error', 'Failed to setup sheets: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Menu Option 2: Install Sunday 11:00 PM IST automated email trigger
+ */
+function menuInstallTrigger() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    installWeeklySundayTrigger();
+    ui.alert(
+      'Trigger Installed Successfully',
+      '✓ Automated Sunday Trigger is active!\n\nEvery Sunday at 11:00 PM IST:\n• All PrintJobs will be exported as an Excel/CSV file.\n• Sent via email to: ' + ADMIN_EMAIL_NOTIFICATION + '\n• The sheet will be automatically cleared for the new week.',
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    ui.alert('Error', 'Failed to install trigger: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Menu Option 3: Manually trigger the PrintJobs email report right now
+ */
+function menuTriggerEmailNow() {
+  const ui = SpreadsheetApp.getUi();
+  const res = ui.alert(
+    'Confirm Send',
+    'Do you want to generate and send the PrintJobs Excel/CSV report right now to ' + ADMIN_EMAIL_NOTIFICATION + '?\n\nNote: This will also archive and clear the sent jobs.',
+    ui.ButtonSet.YES_NO
+  );
+  if (res === ui.Button.YES) {
+    try {
+      weeklySundayPrintJobsReport();
+      ui.alert('Email Sent', '✓ PrintJobs report has been emailed to ' + ADMIN_EMAIL_NOTIFICATION + '.', ui.ButtonSet.OK);
+    } catch (e) {
+      ui.alert('Error', 'Failed to send report: ' + e.message, ui.ButtonSet.OK);
+    }
+  }
+}
+
+/**
+ * Menu Option 4: Send a test OTP email to any email address
+ */
+function menuSendTestOtp() {
+  const ui = SpreadsheetApp.getUi();
+  const prompt = ui.prompt('Test OTP Email', 'Enter the email address to receive a test OTP:', ui.ButtonSet.OK_CANCEL);
+  if (prompt.getSelectedButton() === ui.Button.OK) {
+    const email = prompt.getResponseText().trim();
+    if (!email) {
+      ui.alert('Invalid Email', 'Please enter a valid email address.', ui.ButtonSet.OK);
+      return;
+    }
+    try {
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const htmlBody = `
+        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e0e0e0;border-radius:12px;background:#ffffff">
+          <h2 style="color:#D4175A;margin-top:0">PrintQR Test Verification</h2>
+          <p style="color:#333;font-size:15px">Hello!</p>
+          <p style="color:#555;font-size:14px">Your One-Time Password (OTP) for testing is:</p>
+          <div style="background:#F6DCE6;border-radius:8px;padding:16px;text-align:center;margin:20px 0">
+            <span style="font-size:32px;font-weight:800;letter-spacing:6px;color:#D4175A">${otp}</span>
+          </div>
+          <p style="color:#666;font-size:13px">This test email confirms your Google Apps Script is sending OTPs correctly.</p>
+          <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:12px">PrintQR System &bull; IST: ${getISTTimestamp()}</p>
+        </div>
+      `;
+      MailApp.sendEmail({
+        to: email,
+        subject: `PrintQR - Test OTP Email (${otp})`,
+        htmlBody: htmlBody
+      });
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      logAction(ss, 'Test OTP sent on mail', email, 'Sent via custom menu');
+      ui.alert('Success', '✓ Test OTP email sent successfully to ' + email + '!', ui.ButtonSet.OK);
+    } catch (e) {
+      ui.alert('Error', 'Failed to send test email: ' + e.message, ui.ButtonSet.OK);
+    }
+  }
+}
+
