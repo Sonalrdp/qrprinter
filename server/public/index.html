@@ -221,11 +221,11 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 .figs b{display:block;font:800 clamp(2.4rem,5vw,4rem)/1 var(--display);letter-spacing:-.03em}
 .figs span{color:var(--ink2)}
 .tw{overflow-x:auto}
-#v-admin table{width:100%;border-collapse:collapse;font-size:.95rem}
-#v-admin th{text-align:left;font-weight:500;color:var(--mute);padding:.6rem .8rem .6rem 0;border-bottom:1.5px solid var(--ink);white-space:nowrap}
-#v-admin td{padding:.8rem .8rem .8rem 0;border-bottom:1px solid var(--line);vertical-align:top}
-#v-admin td code{font:500 .9rem Consolas,"Courier New",monospace}
-#v-admin small{color:var(--mute)}
+#v-admin table, #v-dash table{width:100%;border-collapse:collapse;font-size:.95rem}
+#v-admin th, #v-dash th{text-align:left;font-weight:500;color:var(--mute);padding:.6rem .8rem .6rem 0;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+#v-admin td, #v-dash td{padding:.8rem .8rem .8rem 0;border-bottom:1px solid var(--line);vertical-align:top}
+#v-admin td code, #v-dash td code{font:500 .9rem Consolas,"Courier New",monospace}
+#v-admin small, #v-dash small{color:var(--mute)}
 .ac{white-space:nowrap}.lk{background:none;border:0;color:var(--mag);cursor:pointer;font:inherit;text-decoration:underline;padding:0 .6rem 0 0}
 .inl{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem}
 .inl label{display:block;font-weight:500;margin-bottom:.3rem}
@@ -378,9 +378,24 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
   <button class="btn" id="a_btn" type="submit"></button>
   <p class="swap"><span id="a_sw"></span> <a id="a_lnk" href="#"></a></p>
 </form></div></main>
-<main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, get your key, configure Razorpay for customer payments, and install the app on your shop PC.</p></div>
+<main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, connect your payment gateway, track print jobs, and install the app on your shop PC.</p></div>
 
-<section class="dsec" id="rzp-sec">
+<div id="admin_switch_bar" style="margin-bottom:1.2rem" hidden><a class="btn ghost" href="#/admin" style="padding:0.45rem 1rem;font-size:0.9rem">&larr; Switch to Admin Overview</a></div>
+
+<div class="atabs" id="dash_tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="plans">Buy software</button>
+  <button role="tab" aria-selected="false" data-t="rzp">Payment Gateway</button>
+  <button role="tab" aria-selected="false" data-t="jobs">Print jobs</button>
+  <button role="tab" aria-selected="false" data-t="dl">Download and install</button>
+</div>
+
+<div id="dash-panel-plans">
+  <section class="dsec" style="margin-top:0"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
+  <section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
+</div>
+
+<div id="dash-panel-rzp" hidden>
+<section class="dsec" id="rzp-sec" style="margin-top:0">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:0.8rem">
     <h2 style="margin-bottom:0">Payment Gateway (Your Razorpay account)</h2>
     <span id="rzp-status-pill" class="pill"></span>
@@ -444,12 +459,29 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
     </div>
   </form>
 </section>
+</div>
 
-<section class="dsec"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
-<section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
-<section class="dsec"><h2>Download and install</h2>
-<div class="dl"><a class="btn" id="dl-agent-btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
-<ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> (server address is pre-filled automatically).</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol></section></main>
+<div id="dash-panel-jobs" hidden>
+<section class="dsec" style="margin-top:0">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem">
+    <div>
+      <h2 style="margin-bottom:0.2rem">Print jobs</h2>
+      <p class="lead2" style="margin-bottom:0">Live queue of documents printed and paid by customers at your shop.</p>
+    </div>
+    <button class="btn ghost" id="refresh_jobs_btn" style="padding:.5rem 1rem">↻ Refresh jobs</button>
+  </div>
+  <div id="user_jobs_table"></div>
+</section>
+</div>
+
+<div id="dash-panel-dl" hidden>
+<section class="dsec" style="margin-top:0">
+  <h2>Download and install</h2>
+  <div class="dl"><a class="btn" id="dl-agent-btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
+  <ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> (server address is pre-filled automatically).</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol>
+</section>
+</div>
+</main>
 <main id="v-cust" hidden></main>
 <main id="v-admin" class="wrap" hidden></main>
 
@@ -536,9 +568,20 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const views=['home','auth','dash','cust','admin'];
 const show=v=>views.forEach(x=>$('v-'+x).hidden=x!==v);
 
-function nav(){$('navauth').innerHTML=tk()?(localStorage.getItem('pq_admin')==='1'?'<a class="link" href="#/admin" style="margin-left:1.6rem;text-decoration:none;color:var(--mag);font-weight:500">Admin</a>':'')+'<a class="btn ghost" style="margin-left:1.6rem;padding:.6rem 1.1rem" href="#/dashboard">Dashboard</a> <a class="link" href="#" id="lo" style="margin-left:1rem;text-decoration:none;color:var(--ink2)">Log out</a>'
-  :'<a class="link" href="#/login" style="margin-left:1.6rem;text-decoration:none;color:var(--ink2)">Log in</a> <a class="btn" style="margin-left:1rem;padding:.6rem 1.1rem" href="#/signup">Sign up</a>';
-  const lo=$('lo');if(lo)lo.onclick=e=>{e.preventDefault();localStorage.removeItem('pq_token');localStorage.removeItem('pq_admin');location.hash='#/';route()}}
+function nav(){
+  const isAdmin = localStorage.getItem('pq_admin') === '1';
+  $('navauth').innerHTML = tk()
+    ? '<a class="btn ghost" style="margin-left:1.6rem;padding:.6rem 1.1rem" href="' + (isAdmin ? '#/admin' : '#/dashboard') + '">Dashboard</a> <a class="link" href="#" id="lo" style="margin-left:1rem;text-decoration:none;color:var(--ink2)">Log out</a>'
+    : '<a class="link" href="#/login" style="margin-left:1.6rem;text-decoration:none;color:var(--ink2)">Log in</a> <a class="btn" style="margin-left:1rem;padding:.6rem 1.1rem" href="#/signup">Sign up</a>';
+  const lo = $('lo');
+  if(lo) lo.onclick = e => {
+    e.preventDefault();
+    localStorage.removeItem('pq_token');
+    localStorage.removeItem('pq_admin');
+    location.hash = '#/';
+    route();
+  };
+}
 /* ---- auth ---- */
 let authOtpSent = false;
 let countdownTimer = null;
@@ -705,6 +748,26 @@ async function dash(){
   show('dash');
   let me;try{me=await api('/api/me')}catch(e){localStorage.removeItem('pq_token');location.hash='#/login';return}
   $('dhi').textContent='Hi '+me.name.split(' ')[0]+', let\u2019s get your shop set up.';
+  if($('admin_switch_bar')) $('admin_switch_bar').hidden = localStorage.getItem('pq_admin') !== '1';
+
+  // Tab switcher
+  let dashTab = sessionStorage.getItem('pq_dash_tab') || 'plans';
+  const switchDashTab = (t) => {
+    dashTab = t;
+    sessionStorage.setItem('pq_dash_tab', t);
+    ['plans', 'rzp', 'jobs', 'dl'].forEach(x => {
+      const p = $('dash-panel-' + x);
+      if(p) p.hidden = x !== t;
+    });
+    document.querySelectorAll('#dash_tabs button').forEach(b => {
+      b.setAttribute('aria-selected', b.dataset.t === t);
+    });
+    if(t === 'jobs') loadUserJobs();
+  };
+  document.querySelectorAll('#dash_tabs button').forEach(b => {
+    b.onclick = () => switchDashTab(b.dataset.t);
+  });
+  switchDashTab(dashTab);
 
   // Setup Razorpay Section
   const whUrl = window.location.origin + '/api/razorpay/webhook';
@@ -776,6 +839,30 @@ async function dash(){
   $('keys').innerHTML=ks.length?ks.map(k=>'<div class="keyrow"><code>'+esc(k.key)+'</code><button class="btn ghost" data-c="'+esc(k.key)+'" style="padding:.45rem .9rem">Copy</button><span class="meta">'+esc(k.planName)+(k.status==='active'?' \u2013 runs until '+fmt(k.expiresAt):k.status==='expired'?' \u2013 ended '+fmt(k.expiresAt):' \u2013 timer starts when you activate')+'</span><span class="pill '+(k.status==='active'?'on':k.status==='expired'?'off':'')+'">'+(k.status==='waiting'?'Not activated':k.status==='active'?'Active':'Expired')+'</span></div>').join('')
     :'<p>No keys yet. Select a plan above and your key will show up here.</p>';
   $('keys').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)});
+  
+  // User print jobs loader
+  async function loadUserJobs(){
+    const box = $('user_jobs_table');
+    if(!box) return;
+    box.innerHTML = '<p style="color:var(--mute)">Loading print jobs...</p>';
+    try {
+      const jobs = await api('/api/user/jobs');
+      if(!jobs || !jobs.length){
+        box.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs yet</p><p style="color:var(--ink2);max-width:52ch;margin:0 auto">When customers scan your shop standee QR and upload files, their print jobs will show up here automatically.</p></div>';
+        return;
+      }
+      const fmtJ = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+      const pillJ = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + esc(s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
+      box.innerHTML = '<div class="tw"><table><thead><tr><th>Date &amp; Time</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+        + jobs.map(j => '<tr><td>' + fmtJ(j.createdAt) + '</td><td><code>' + esc(j.filename) + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pillJ(j.status) + '</td></tr>').join('')
+        + '</tbody></table></div>';
+    } catch(err) {
+      box.innerHTML = '<p class="err">' + esc(err.message) + '</p>';
+    }
+  }
+  const rjb = $('refresh_jobs_btn');
+  if(rjb) rjb.onclick = loadUserJobs;
+
   const dl=$('dl-agent-btn')||document.querySelector('.dl a');
   if(dl)dl.href='/downloads/PrintQR-Agent.zip?origin='+encodeURIComponent(window.location.origin);
 }
@@ -853,7 +940,7 @@ async function admin(){
   try{d=await api('/api/admin/data')}catch(e){root.innerHTML='<h1>Admins only</h1><p class="lead2">This account does not have admin access.</p>';return}
   const fmt=t=>t?new Date(t).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}):'\u2013';
   const inr=n=>'\u20B9'+Math.round(n).toLocaleString('en-IN'),S=d.stats;
-  const tabs=[['overview','Overview'],['keys','Keys'],['users','Users'],['shops','Shops'],['jobs','Print jobs'],['prices','Prices']];
+  const tabs=[['overview','Overview'],['keys','Keys'],['users','Users'],['shops','Shops'],['jobs','Print jobs'],['prices','Prices'],['myshop','Shop Setup']];
   let tab=sessionStorage.getItem('pq_at')||'overview';
   const tbl=(h,rows)=>'<div class="tw"><table><thead><tr>'+h.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td colspan="'+h.length+'">Nothing here yet.</td></tr>')+'</tbody></table></div>';
   const pill=s=>'<span class="pill '+(s==='active'||s==='printed'?'on':s==='expired'||s==='failed'?'off':'')+'">'+esc(s)+'</span>';
@@ -864,10 +951,11 @@ async function admin(){
     users:()=>tbl(['Name','Email','Keys','Demo used'],d.users.map(u=>'<tr><td>'+esc(u.name)+(u.isAdmin?' (admin)':'')+'</td><td>'+esc(u.email)+'</td><td>'+u.keys+'</td><td>'+(u.demoUsed?'Yes':'No')+'</td></tr>')),
     shops:()=>tbl(['Shop','Owner','Mode','UPI','Status','Printed jobs'],d.shops.map(s=>'<tr><td>'+esc(s.name)+'<br><small>'+s.id+'</small></td><td>'+esc(s.owner)+'</td><td>'+(s.mode==='locked'?'Shopper locked':'Default')+'</td><td>'+esc(s.upi||'\u2013')+'</td><td>'+pill(s.active?'active':'expired')+'</td><td>'+s.jobs+'</td></tr>')),
     jobs:()=>tbl(['When','Shop','File','Pages','Amount','Status'],d.jobs.map(j=>'<tr><td>'+fmt(j.createdAt)+'</td><td>'+esc(j.shop||'')+'</td><td>'+esc(j.filename)+'</td><td>'+j.pages+'</td><td>'+inr(j.amount)+'</td><td>'+pill(j.status)+'</td></tr>')),
-    prices:()=>'<form id="prf" class="inl"><div><label for="p3">3 months (\u20B9)</label><input id="p3" type="number" min="0" value="'+d.prices['3m']+'"></div><div><label for="p6">6 months (\u20B9)</label><input id="p6" type="number" min="0" value="'+d.prices['6m']+'"></div><div><label for="p12">12 months (\u20B9)</label><input id="p12" type="number" min="0" value="'+d.prices['12m']+'"></div><button class="btn" type="submit">Save prices</button></form><div class="err" id="ae"></div><p style="color:var(--ink2)">New prices show on the dashboard right away. Keys already bought keep what was paid.</p>'
+    prices:()=>'<form id="prf" class="inl"><div><label for="p3">3 months (\u20B9)</label><input id="p3" type="number" min="0" value="'+d.prices['3m']+'"></div><div><label for="p6">6 months (\u20B9)</label><input id="p6" type="number" min="0" value="'+d.prices['6m']+'"></div><div><label for="p12">12 months (\u20B9)</label><input id="p12" type="number" min="0" value="'+d.prices['12m']+'"></div><button class="btn" type="submit">Save prices</button></form><div class="err" id="ae"></div><p style="color:var(--ink2)">New prices show on the dashboard right away. Keys already bought keep what was paid.</p>',
+    myshop:()=>'<div style="background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:2rem;max-width:680px"><h3 style="margin-bottom:0.6rem">Shopkeeper Features</h3><p style="color:var(--ink2);margin-bottom:1.5rem">As an administrator, you can also manage your own shop payment gateway, activation keys, customer print jobs, or download the agent app directly in the shop view.</p><a class="btn" href="#/dashboard" style="display:inline-block;text-decoration:none">Open Shop Dashboard &rarr;</a></div>'
   };
   function draw(){
-    root.innerHTML='<div class="dhead"><h1>Admin</h1></div><div class="atabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(t[0]===tab)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="ab">'+body[tab]()+'</div>';
+    root.innerHTML='<div class="dhead"><h1>Dashboard</h1><p class="lead2">Overview, keys, users, shops, and real-time print activity.</p></div><div class="atabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(t[0]===tab)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="ab">'+body[tab]()+'</div>';
     root.querySelectorAll('.atabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sessionStorage.setItem('pq_at',tab);draw()});
     root.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
       if(b.dataset.a==='revoke'&&!confirm('Revoke this key now? The shop stops printing immediately.'))return;

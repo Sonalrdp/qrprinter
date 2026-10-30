@@ -530,6 +530,28 @@ http.createServer(async(req,res)=>{
         settleOrder(o,b.razorpay_payment_id);return J({key:o.keyId});
       }
       if(p==='/api/keys'){if(!me)return J({error:'Log in first'},401);return J(db.keys.filter(k=>k.userId===me.id).map(k=>({...k,planName:NAMES[k.plan],status:!k.activatedAt?'waiting':live(k)?'active':'expired'})).reverse())}
+      if(p==='/api/user/jobs'){
+        if(!me)return J({error:'Log in first'},401);
+        const myKeys=db.keys.filter(k=>k.userId===me.id).map(k=>k.key);
+        const myShops=db.shops.filter(s=>myKeys.includes(s.keyId));
+        const myShopIds=myShops.map(s=>s.id);
+        const jobs=db.jobs.filter(j=>myShopIds.includes(j.shopId)).slice(-150).reverse().map(j=>{
+          const sh=myShops.find(s=>s.id===j.shopId);
+          return {
+            id:j.id,
+            shopName:sh?sh.name:'',
+            filename:j.filename,
+            pages:j.pages,
+            copies:(j.options&&j.options.copies)||1,
+            color:(j.options&&j.options.color)||'bw',
+            duplex:!!(j.options&&j.options.duplex),
+            amount:j.amount,
+            status:j.status,
+            createdAt:j.createdAt
+          };
+        });
+        return J(jobs);
+      }
       if(p==='/api/activate'&&m==='POST'){
         const k=db.keys.find(x=>x.key===(b.key||'').trim().toUpperCase());
         if(!k)return J({error:'This key was not found. Check it and try again.'},400);
