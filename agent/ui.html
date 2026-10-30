@@ -97,6 +97,8 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
       <div class="g2">
         <div><label for="shopname">Shop name on the standee</label><input id="shopname"></div>
         <div><label for="upi">Your UPI ID</label><input id="upi" placeholder="name@bank"></div>
+        <div><label for="owner">Name on your UPI / bank account</label><input id="owner" placeholder="As shown in your UPI app"></div>
+        <div><label for="phone">Your mobile number</label><input id="phone" inputmode="numeric" placeholder="10-digit number"></div>
         <div><label for="r_bw">Price per page, black &amp; white (₹)</label><input id="r_bw" type="number" min="0" step="0.5"></div>
         <div><label for="r_color">Price per page, colour (₹)</label><input id="r_color" type="number" min="0" step="0.5"></div>
       </div>
@@ -128,7 +130,7 @@ async function fillPrinters(){
 function fillSettings(){
   const s=S.cfg.shop;document.querySelector('input[name=mode][value='+s.mode+']').checked=true;modeUI();
   $('d_color').value=s.defaults.color;$('d_copies').value=s.defaults.copies;$('d_duplex').value=s.defaults.duplex?'1':'0';$('d_range').value=s.defaults.range||'';
-  $('shopname').value=s.name;$('upi').value=s.upi;$('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
+  $('shopname').value=s.name;$('upi').value=s.upi;$('owner').value=s.ownerName||'';$('phone').value=s.phone||'';$('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
 }
 function modeUI(){const v=document.querySelector('input[name=mode]:checked').value;$('m0').classList.toggle('sel',v==='default');$('m1').classList.toggle('sel',v==='locked')}
 function setTab(t){tab=t;['1','2'].forEach(x=>{$('p'+x).classList.toggle('on',x===t);document.querySelector('.tab[data-t="'+x+'"]').setAttribute('aria-selected',x===t)})}
@@ -141,7 +143,7 @@ $('save').onclick=async()=>{
   $('serr').textContent='';$('saved').textContent='';
   const upi=$('upi').value.trim();if(!/^[\w.\-]+@[\w]+$/.test(upi)){$('serr').textContent='Enter a valid UPI ID, like name@bank.';return}
   try{await api('/local/settings',{
-    name:$('shopname').value.trim()||S.cfg.shop.name,upi,mode:document.querySelector('input[name=mode]:checked').value,
+    name:$('shopname').value.trim()||S.cfg.shop.name,upi,ownerName:$('owner').value.trim(),phone:$('phone').value.trim(),mode:document.querySelector('input[name=mode]:checked').value,
     rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
     defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
     slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value}});

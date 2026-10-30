@@ -20,8 +20,15 @@ PART 2: Shop PC (agent)
 IMPORTANT BEFORE REAL USE
   - Customers on their phones must reach your server. Use a public host (or same Wi-Fi with your PC's
     LAN IP, e.g. http://192.168.1.5:3000 as the server address in the agent) so the QR works.
-  - Payments are NOT verified. Plan purchase and customer "I have paid" are simulated.
-    Add a gateway (Razorpay/Cashfree) in server/server.js where marked "PAYMENT NOTE".
+  - PAYMENTS (Razorpay): put RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET in .env.
+    With no keys the site stays in SIMULATED mode (testing only, nothing is verified).
+    * Plan purchases: paid through Razorpay Checkout; the activation key is created only after the payment is verified.
+    * Customer print payments: split by Razorpay Route straight to the shop's UPI ID. Shops enter their UPI ID,
+      the name on that UPI account and their mobile number in the agent (Page settings).
+    * Razorpay dashboard: add a webhook to https://YOUR-DOMAIN/api/razorpay/webhook for payment.captured.
+    * Ask Razorpay support to enable Route and VPA Settlements. UPI linked accounts work with LIVE keys only;
+      with TEST keys, checkout works but the money is not split to shops.
+    * PLATFORM_FEE_PERCENT in .env is your cut of each print payment (default 0).
   - Edit plan prices at the top of server/server.js (PRICES).
   - Supported uploads: PDF and images. Word files must be saved as PDF first.
   - Printing uses the pdf-to-printer package (Windows).

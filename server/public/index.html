@@ -1,1324 +1,598 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PrintQR - Customers scan, pay, and your printer prints</title>
+<title>PrintQR – Customers scan, pay, and your printer prints</title>
 <meta name="description" content="Put a QR standee on your counter. Customers upload files from their phone, pay by UPI, and your printer starts on its own.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-<!-- Razorpay Checkout Library -->
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#FAF9F5;
-  --ink:#181B26;
-  --ink2:#545868;
-  --mute:#878A99;
-  --line:#E3E1D8;
-  --mag:#D4175A;
-  --magdim:#FDE8EF;
-  --yel:#FFD400;
-  --cya:#00A6D6;
-  --green:#1F7A47;
-  --greendim:#DDF0E4;
-  --display:'Space Grotesk',system-ui,sans-serif;
-  --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  --paper:#F1F2EE; --sheet:#FFFFFF; --ink:#181B26; --ink2:#2A2E3D; --mute:#6A6F7D;
+  --line:#D9DBD4; --mag:#D4175A; --magdim:#F6DCE6;
+  --display:"Bricolage Grotesque","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box;margin:0}
 html{scroll-behavior:smooth}
-body{
-  background:var(--bg);
-  color:var(--ink);
-  font-family:var(--body);
-  line-height:1.5;
-  font-size:16px;
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:1120px;margin-inline:auto;padding-inline:1.5rem}
+body{background:var(--paper);color:var(--ink);font:400 1.0625rem/1.6 var(--body);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--mag);outline-offset:3px}
+.wrap{width:min(1180px,92vw);margin-inline:auto}
+h1,h2,h3{font-family:var(--display);line-height:.98;letter-spacing:-.025em}
+h1{font-weight:800;font-size:clamp(3.2rem,8.6vw,7.4rem)}
+h2{font-weight:800;font-size:clamp(2.2rem,5vw,4rem)}
+p{max-width:52ch}
 
-/* typography */
-h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.1;letter-spacing:-.02em}
-h1{font-size:clamp(2.4rem,5.5vw,4.5rem)}
-h2{font-size:clamp(1.9rem,3.8vw,3rem)}
-h3{font-size:1.3rem}
-p.lead{font-size:clamp(1.1rem,1.8vw,1.35rem);color:var(--ink2);max-width:44ch}
+/* nav */
+nav{display:flex;justify-content:space-between;align-items:center;padding:1.4rem 0}
+.logo{font:800 1.4rem var(--display);text-decoration:none;letter-spacing:-.02em}
+.logo i{font-style:normal;color:var(--mag)}
+nav a.link{margin-left:1.6rem;text-decoration:none;color:var(--ink2);font-size:.95rem}
+nav a.link:hover{color:var(--mag)}
 
 /* buttons */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  font-family:var(--body);font-weight:600;font-size:1rem;
-  padding:.85rem 1.6rem;border-radius:999px;
-  background:var(--ink);color:#fff;text-decoration:none;
-  border:1.5px solid var(--ink);cursor:pointer;
-  transition:transform .15s ease,background .15s ease;
-}
-.btn:hover{background:#000;transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn{display:inline-block;font:500 1rem var(--body);padding:.95rem 1.5rem;border-radius:999px;text-decoration:none;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;transition:background .15s,color .15s,transform .15s}
+.btn:hover{background:var(--mag);border-color:var(--mag)}
+.btn:active{transform:translateY(1px)}
 .btn.ghost{background:transparent;color:var(--ink)}
-.btn.ghost:hover{background:var(--line)}
-.btn.mag{background:var(--mag);border-color:var(--mag);color:#fff}
-.btn.mag:hover{background:#BA134E}
-
-/* header */
-header{padding:1.4rem 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(250,249,245,.92);backdrop-filter:blur(8px);z-index:20}
-header .wrap{display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:var(--display);font-weight:800;font-size:1.4rem;text-decoration:none;color:var(--ink)}
-.logo i{color:var(--mag);font-style:normal}
-nav a{font-weight:600;color:var(--ink2);text-decoration:none;margin-left:1.6rem;font-size:.95rem}
-nav a:hover{color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);border-color:var(--ink);color:#fff}
 
 /* hero */
-.hero{padding:4.5rem 0 6rem;display:grid;grid-template-columns:1.2fr .8fr;gap:3rem;align-items:center}
-.cta{display:flex;gap:1rem;align-items:center;margin-top:2.2rem;flex-wrap:wrap}
+.hero{position:relative;padding:3rem 0 9rem}
+.hero h1{max-width:9ch}
+.hero p.lead{font-size:1.3rem;margin:2rem 0 2.2rem;max-width:34ch;color:var(--ink2)}
+.hero .cta{display:flex;gap:.8rem;flex-wrap:wrap}
+.standee{position:absolute;right:2%;top:1rem;width:min(360px,40vw);aspect-ratio:210/297;background:var(--sheet);border:1px solid var(--line);box-shadow:0 30px 60px -30px rgba(24,27,38,.45);transform:rotate(3.5deg);padding:7% 8%;display:flex;flex-direction:column;z-index:2}
+.standee .shop{font:800 clamp(1.2rem,2.6vw,1.9rem)/1 var(--display);letter-spacing:-.02em}
+.standee .sub{font-size:clamp(.7rem,1.2vw,.9rem);color:var(--mute);margin-top:.4rem}
+.standee .qr{margin:auto;width:78%;aspect-ratio:1}
+.standee .foot{font:800 clamp(1rem,2vw,1.5rem)/1.05 var(--display);letter-spacing:-.02em}
+.standee .foot span{color:var(--mag)}
+.standee .reg{position:absolute;width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%}
+.standee .reg::after{content:"";position:absolute;inset:-5px 5px;border-left:1.5px solid var(--ink)}
+.standee .reg::before{content:"";position:absolute;inset:5px -5px;border-top:1.5px solid var(--ink)}
+.standee .reg.a{top:-24px;left:-24px}.standee .reg.b{bottom:-24px;right:-24px}
+.cmyk{position:absolute;right:-1px;top:100%;display:flex;margin-top:6px}
+.cmyk b{width:18px;height:10px}
 
-/* phone preview mockup */
-.phone{
-  width:min(340px,100%);margin-inline:auto;
-  border:10px solid #181B26;border-radius:40px;background:#fff;
-  padding:1.2rem;box-shadow:0 24px 48px -12px rgba(24,27,38,.18);
-}
-.phone .topbar{display:flex;justify-content:space-between;font-size:.75rem;font-weight:600;color:var(--mute);margin-bottom:1rem}
-.phone .shopname{font-family:var(--display);font-weight:700;font-size:1.15rem}
-.phone .box{margin-top:.8rem;border:1.5px solid var(--line);border-radius:12px;padding:.8rem}
-.phone .row{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;padding:.4rem 0}
-.phone .ctl{margin-top:.6rem;border-top:1px dashed var(--line);padding-top:.7rem}
-.seg{display:flex;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden}
-.seg button{flex:1;padding:.35rem;border:0;background:transparent;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:600}
+/* flow */
+.flow{position:relative;padding:3rem 0 8rem}
+.flow .grid{display:grid;grid-template-columns:5fr 4fr 4fr;gap:3rem;align-items:start}
+.flow h2{grid-column:1 / 2;margin-top:-4rem;position:relative;z-index:3}
+.phone{grid-column:2;width:300px;justify-self:center;background:var(--ink);border-radius:38px;padding:11px;margin-top:-2rem;box-shadow:0 40px 70px -35px rgba(24,27,38,.6)}
+.screen{background:var(--sheet);border-radius:28px;padding:1.2rem 1.1rem 1.3rem;font-size:.88rem;line-height:1.4;min-height:520px;display:flex;flex-direction:column;gap:.9rem}
+.screen .top{display:flex;justify-content:space-between;align-items:baseline}
+.screen .top b{font:800 1.1rem var(--display)}
+.screen .top small{color:var(--mute)}
+.file{display:flex;gap:.7rem;align-items:center;padding:.7rem;border:1px solid var(--line);border-radius:10px}
+.file .ico{width:34px;height:42px;background:var(--magdim);border-radius:3px;display:grid;place-items:center;font:800 .62rem var(--body);color:var(--mag)}
+.file small{display:block;color:var(--mute)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden}
+.seg button{font:500 .85rem var(--body);padding:.55rem;background:transparent;border:0;cursor:pointer;color:var(--ink)}
 .seg button[aria-pressed=true]{background:var(--ink);color:#fff}
-.step{display:flex;align-items:center;gap:.6rem}
-.step button{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--ink);background:#fff;cursor:pointer;font-weight:700}
-.pay{
-  margin-top:1.2rem;background:var(--mag);color:#fff;border:0;border-radius:12px;
-  padding:.85rem;font:600 1rem var(--body);display:flex;justify-content:space-between;
-  width:100%;cursor:pointer;
-}
+.row{display:flex;justify-content:space-between;align-items:center}
+.step{display:flex;border:1px solid var(--line);border-radius:9px}
+.step button{width:34px;height:32px;border:0;background:none;font-size:1.1rem;cursor:pointer}
+.step span{min-width:30px;display:grid;place-items:center}
+.locked .ctl{opacity:.45;pointer-events:none}
+.lockmsg{display:none;background:var(--magdim);border-radius:8px;padding:.55rem .7rem;font-size:.8rem}
+.locked .lockmsg{display:block}
+.pay{margin-top:auto;background:var(--mag);color:#fff;border:0;border-radius:12px;padding:.95rem;font:500 1rem var(--body);display:flex;justify-content:space-between}
+.modeswitch{grid-column:2;justify-self:center;margin-top:1rem;display:flex;gap:.4rem;font-size:.9rem;align-items:center}
+.modeswitch .seg{width:260px}
+.steps{grid-column:3;list-style:none;padding:0;counter-reset:s;margin-top:1rem}
+.steps li{counter-increment:s;padding:0 0 2rem 3.2rem;position:relative}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-.15rem;font:800 2.4rem/1 var(--display);color:var(--mag)}
+.steps b{display:block;font:800 1.3rem var(--display);letter-spacing:-.01em;margin-bottom:.2rem}
+.steps p{color:var(--ink2);font-size:1rem}
 
-/* sections */
-.flow{padding:5rem 0;border-top:1px solid var(--line)}
-.flow ol{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem;list-style:none;margin-top:2.5rem;counter-reset:st}
-.flow li{counter-increment:st;position:relative}
-.flow li::before{content:counter(st,decimal-leading-zero);font-family:var(--display);font-size:2.8rem;font-weight:700;color:var(--line);display:block;margin-bottom:.5rem}
-.flow li b{font-size:1.25rem;display:block;margin-bottom:.4rem}
-.flow li p{color:var(--ink2);font-size:.95rem}
+/* counter / agent */
+.counter{background:var(--ink);color:#EDEEF2;padding:7rem 0 8rem;position:relative}
+.counter .head{display:grid;grid-template-columns:6fr 5fr;gap:3rem;align-items:end;margin-bottom:4rem}
+.counter h2{color:#fff}
+.counter p{color:#B9BDCB}
+.win{background:#F7F7F4;color:var(--ink);border-radius:12px;box-shadow:0 50px 80px -40px #000;width:min(980px,100%);margin-left:auto;margin-right:-4vw;overflow:hidden}
+.titlebar{display:flex;gap:7px;padding:.7rem .9rem;background:#E4E5DF;border-bottom:1px solid var(--line)}
+.titlebar i{width:11px;height:11px;border-radius:50%;background:#C3C5BC}
+.bar{display:flex;align-items:center;gap:2rem;padding:1rem 1.4rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.who{display:flex;align-items:center;gap:.7rem;margin-right:auto}
+.av{width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 .9rem var(--display)}
+.who small{display:block;color:var(--mute);line-height:1.2}
+.kv small{display:block;color:var(--mute);font-size:.78rem}
+.kv b{font:800 1.25rem var(--display);font-variant-numeric:tabular-nums}
+.qrbtn{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--ink);background:#fff;cursor:pointer;display:grid;place-items:center;transition:background .15s}
+.qrbtn:hover{background:var(--magdim)}
+.slots{padding:1.4rem}
+.slots h3{font-size:1.1rem;margin-bottom:.9rem}
+.slotgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.slot{padding:1rem;border-right:1px solid var(--line)}
+.slot:last-child{border-right:0}
+.slot small{color:var(--mute);display:block}
+.slot b{display:block;font:800 1.05rem var(--display);margin:.15rem 0 .5rem}
+.slot .pr{font-size:.85rem}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E9E5B;margin-right:.35rem}
+.slot.empty{color:var(--mute);background:repeating-linear-gradient(135deg,#fff 0 8px,#F4F4F0 8px 16px)}
+.pm{display:flex;gap:2rem;margin-top:1.2rem;font-size:.92rem;color:var(--ink2);flex-wrap:wrap}
+.pm div{flex:1;min-width:220px}.pm b{display:block;color:var(--ink)}
 
-.counter{padding:5rem 0;border-top:1px solid var(--line)}
-.modes{padding:5rem 0;border-top:1px solid var(--line)}
-.modes .cols{display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2.5rem}
-.modes .big{font-family:var(--display);font-size:3rem;font-weight:800;color:var(--mag);margin-bottom:.4rem}
+/* modes */
+.modes{padding:9rem 0 6rem}
+.modes .cols{display:grid;grid-template-columns:1fr 1fr;gap:6rem}
+.modes .cols>div:last-child{margin-top:6rem}
+.modes .big{font:800 clamp(4rem,11vw,9rem)/.85 var(--display);letter-spacing:-.04em}
+.modes .big.out{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.modes h3{font-size:1.5rem;margin:1.4rem 0 .6rem}
+.modes p{color:var(--ink2)}
+.modes .intro{margin-bottom:5rem}
 
-.plans{padding:5rem 0;border-top:1px solid var(--line)}
-.plans .layout{display:grid;grid-template-columns:4fr 7fr;gap:4rem}
+/* plans */
+.plans{padding:4rem 0 9rem}
+.plans .layout{display:grid;grid-template-columns:4fr 7fr;gap:5rem}
 .plans ul{list-style:none;padding:0;border-top:1.5px solid var(--ink)}
-.plans li{display:grid;grid-template-columns:9rem 1fr auto;gap:1.5rem;align-items:baseline;padding:1.4rem 0;border-bottom:1px solid var(--line)}
-.plans li b{font:700 1.8rem/1 var(--display)}
+.plans li{display:grid;grid-template-columns:9rem 1fr auto;gap:1.5rem;align-items:baseline;padding:1.5rem 0;border-bottom:1px solid var(--line)}
+.plans li b{font:800 2rem/1 var(--display);letter-spacing:-.02em}
 .plans li span{color:var(--ink2)}
-.plans li em{font-style:normal;color:var(--mag);font-weight:600}
+.plans li em{font-style:normal;font-size:.9rem;color:var(--mag);font-weight:500}
 
-.end{background:var(--ink);color:#fff;padding:5rem 0;margin-top:4rem}
-.end h2{font-size:clamp(2rem,4.5vw,3.2rem)}
-.end p{color:#A0A4B4;margin-top:.8rem}
-.end .in{display:flex;justify-content:space-between;align-items:center;gap:2rem;flex-wrap:wrap}
+/* end */
+.end{background:var(--mag);color:#fff;padding:6rem 0}
+.end .in{display:flex;justify-content:space-between;gap:3rem;align-items:flex-end;flex-wrap:wrap}
+.end h2{max-width:11ch}
+.end p{color:#FCE4EC}
 .end .btn{background:#fff;color:var(--ink);border-color:#fff}
+.end .btn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+footer{padding:2rem 0;color:var(--mute);font-size:.9rem}
+footer .wrap{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 
-footer{padding:2.5rem 0;border-top:1px solid var(--line);color:var(--mute);font-size:.9rem}
-footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+/* modal */
+dialog{border:0;border-radius:14px;padding:2rem;max-width:min(94vw,520px);background:var(--paper);box-shadow:0 40px 80px -20px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(24,27,38,.6)}
+dialog .standee{position:relative;transform:none;right:auto;top:auto;width:min(300px,70vw);margin:0 auto 1.5rem;box-shadow:none}
+dialog .acts{display:flex;gap:.7rem;justify-content:center}
 
-/* dashboard & customer views */
-#v-auth,#v-dash,#v-admin{padding:3rem 0 6rem}
-.authgrid{display:grid;grid-template-columns:6fr 5fr;gap:4rem;align-items:start}
-.lead2{margin-top:.8rem;color:var(--ink2);font-size:1.15rem}
-input,select{width:100%;padding:.8rem .95rem;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit}
-input:focus,select:focus{outline:none;border-color:var(--ink)}
-label{display:block;font-weight:600;margin:1rem 0 .35rem;font-size:.95rem}
-.err{color:var(--mag);min-height:1.4em;margin-top:.6rem;font-size:.9rem;font-weight:500}
-.notice{padding:1rem 1.2rem;border-radius:10px;background:var(--magdim);color:var(--mag);margin-bottom:1.5rem;font-size:.95rem;border-left:4px solid var(--mag)}
-.notice.good{background:var(--greendim);color:var(--green);border-left-color:var(--green)}
-.swap{margin-top:1.2rem;color:var(--ink2)}
-.dhead{margin-bottom:3rem}
-
-.dtabs{display:flex;gap:.6rem;border-bottom:1.5px solid var(--line);margin-bottom:2.5rem}
-.dtabs button{
-  padding:.8rem 1.4rem;border:0;background:transparent;cursor:pointer;font:600 1rem var(--body);
-  color:var(--ink2);border-bottom:2.5px solid transparent;margin-bottom:-2px;
+@media (max-width:900px){
+  .standee{position:relative;right:auto;top:auto;width:min(300px,78%);margin:3rem 0 0 auto}
+  .hero{padding-bottom:5rem}
+  .flow .grid,.counter .head,.modes .cols,.plans .layout{grid-template-columns:1fr}
+  .flow h2{margin-top:0}.phone,.modeswitch,.steps{grid-column:1}
+  .modes .cols{gap:3.5rem}.modes .cols>div:last-child{margin-top:0}
+  .win{margin-right:0}.slotgrid{grid-template-columns:1fr 1fr}
+  .slot:nth-child(2){border-right:0}.slot:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .plans li{grid-template-columns:1fr;gap:.3rem}
+  nav a.link{display:none}
 }
-.dtabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
+@media print{
+  body *{visibility:hidden}
+  dialog,dialog .standee,dialog .standee *{visibility:visible}
+  dialog{position:fixed;inset:0;margin:auto;box-shadow:none;background:#fff}
+  dialog .acts{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
-.dsec{margin-bottom:4rem}
+.authv,#v-auth,#v-dash{padding:3rem 0 7rem}
+.authgrid{display:grid;grid-template-columns:6fr 5fr;gap:5rem;align-items:start;padding-top:2rem}
+.lead2{margin-top:1.2rem;color:var(--ink2);font-size:1.2rem;max-width:30ch}
+#v-auth input,#v-cust input,#v-cust select{width:100%;padding:.8rem .9rem;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit}
+#v-auth label,#v-cust label{display:block;font-weight:500;margin:1rem 0 .35rem}
+#v-auth .btn{margin-top:1.2rem;width:100%}
+.err{color:var(--mag);min-height:1.5em;margin-top:.7rem;font-size:.95rem}
+.swap{margin-top:1.2rem;color:var(--ink2)}
+.dhead{margin-bottom:4rem}.dhead h1{font-size:clamp(2.6rem,6vw,4.8rem)}
+.dsec{margin-bottom:5rem}.dsec h2{font-size:clamp(1.8rem,3.5vw,2.6rem);margin-bottom:1.6rem}
 .planlist{list-style:none;padding:0;border-top:1.5px solid var(--ink)}
 .planlist li{display:grid;grid-template-columns:11rem 1fr auto auto;gap:1.5rem;align-items:center;padding:1.2rem 0;border-bottom:1px solid var(--line)}
-.planlist b{font:700 1.5rem/1 var(--display)}
-.planlist .pr{font:700 1.3rem var(--display)}
-.buybox{margin-top:1.4rem;padding:1.2rem 0 0;border-top:1.5px solid var(--mag)}
-.buybox p{margin-bottom:1rem}.buybox .btn+.btn{margin-left:.6rem}
-
-.keyrow{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;padding:1.1rem 0;border-bottom:1px solid var(--line)}
-.keyrow code{font:600 1.1rem monospace;background:#fff;border:1.5px solid var(--ink);padding:.4rem .8rem;border-radius:8px}
+.planlist b{font:800 1.6rem/1 var(--display);letter-spacing:-.02em}
+.planlist .pr{font:800 1.3rem var(--display)}
+.buybox{margin-top:1.6rem;padding:1.4rem 0 0;border-top:1.5px solid var(--mag)}
+.buybox p{margin-bottom:1rem;max-width:60ch}.buybox .btn+.btn{margin-left:.6rem}
+.keyrow{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;padding:1.1rem 0;border-bottom:1px solid var(--line)}
+.keyrow code{font:500 1.15rem "Consolas","Courier New",monospace;background:#fff;border:1.5px solid var(--ink);padding:.45rem .8rem;border-radius:8px;letter-spacing:.04em}
 .keyrow .meta{color:var(--ink2);margin-right:auto}
-.pill{font-size:.8rem;font-weight:600;padding:.2rem .75rem;border-radius:999px;background:var(--magdim);color:var(--mag);display:inline-block}
-.pill.on{background:var(--greendim);color:var(--green)}
-.pill.off{background:#E7E7E3;color:var(--mute)}
-
-.dl{margin-bottom:1.6rem}.inst{padding-left:1.4rem;max-width:62ch}.inst li{margin:.4rem 0}
-
-/* stats card grid */
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1.2rem;margin-bottom:2.5rem}
-.card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:1.4rem}
-.card small{display:block;color:var(--ink2);font-weight:600;font-size:.85rem;margin-bottom:.4rem}
-.card b{font:700 2.2rem/1 var(--display);letter-spacing:-.02em}
-.card .subtext{font-size:.8rem;color:var(--mute);margin-top:.4rem}
-
-/* customer interface */
-#v-cust{padding:2rem 0 5rem;width:min(480px,94vw);margin-inline:auto}
-#v-cust h1{font-size:2.2rem;margin:.4rem 0 .2rem}
-#v-cust .sub{color:var(--ink2);margin-bottom:1.6rem}
-.drop{display:block;border:2px dashed var(--ink);border-radius:14px;padding:2.2rem 1.2rem;text-align:center;cursor:pointer;background:#fff}
+.pill{font-size:.85rem;padding:.2rem .7rem;border-radius:999px;background:var(--magdim);color:var(--mag)}
+.pill.on{background:#DDF0E4;color:#1F7A47}.pill.off{background:#E7E7E3;color:var(--mute)}
+.dl{margin-bottom:1.6rem}.inst{padding-left:1.4rem;max-width:62ch}.inst li{margin:.5rem 0}
+#v-cust{padding:1.4rem 0 4rem;width:min(460px,92vw);margin-inline:auto}
+#v-cust h1{font-size:2.4rem;margin:.4rem 0 .2rem}
+#v-cust .sub{color:var(--ink2);margin-bottom:1.4rem}
+.drop{display:block;border:2px dashed var(--ink);border-radius:14px;padding:2rem 1rem;text-align:center;cursor:pointer;background:#fff}
 .drop:hover{background:var(--magdim)}.drop input{display:none}
-.cbox{margin-top:1.4rem}
+.cbox{margin-top:1.2rem}
 .cbox .seg{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--ink);border-radius:10px;overflow:hidden}
 .cbox .seg button{padding:.7rem;border:0;background:transparent;cursor:pointer;font:inherit}
 .cbox .seg button[aria-pressed=true]{background:var(--ink);color:#fff}
 .lockedbox{background:var(--magdim);border-radius:10px;padding:.9rem 1rem;margin-top:1.2rem}
-.cbox .btn{width:100%;margin-top:1.4rem;font-size:1.1rem;padding:1rem}
+.cbox .btn{width:100%;margin-top:1.4rem;background:var(--mag);border-color:var(--mag);font-size:1.1rem}
+.status{margin-top:1.4rem;padding:1rem;border:1.5px solid var(--ink);border-radius:12px;background:#fff}
+@media (max-width:900px){.authgrid{grid-template-columns:1fr;gap:2rem}.planlist li{grid-template-columns:1fr auto;gap:.4rem 1rem}.planlist li span{grid-column:1/-1;order:3}}
 
-/* status, success and failure screens */
-.status{margin-top:1.4rem;padding:1.4rem;border:1.5px solid var(--ink);border-radius:14px;background:#fff}
-.succ-card{border:2px solid var(--green);background:#fff;border-radius:16px;padding:1.8rem;margin-top:1.4rem;text-align:center}
-.succ-badge{width:56px;height:56px;border-radius:50%;background:var(--greendim);color:var(--green);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem}
-.fail-card{border:2px solid var(--mag);background:#fff;border-radius:16px;padding:1.8rem;margin-top:1.4rem;text-align:center}
-.fail-badge{width:56px;height:56px;border-radius:50%;background:var(--magdim);color:var(--mag);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem}
-.receipt-table{width:100%;margin:1.2rem 0;text-align:left;font-size:.9rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.receipt-table td{padding:.5rem 0}
-.receipt-table td:last-child{text-align:right;font-weight:600}
-
-/* admin tables */
+#v-admin{padding:3rem 0 7rem}
 .atabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
 .atabs button{padding:.55rem 1.1rem;border-radius:999px;border:1.5px solid var(--ink);background:transparent;cursor:pointer;font:inherit}
 .atabs button[aria-selected=true]{background:var(--ink);color:#fff}
-.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem 2rem;padding-top:1rem}
-.figs b{display:block;font:700 clamp(2.2rem,4.5vw,3.6rem)/1 var(--display)}
+.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:3rem 2rem;padding-top:1rem}
+.figs b{display:block;font:800 clamp(2.4rem,5vw,4rem)/1 var(--display);letter-spacing:-.03em}
 .figs span{color:var(--ink2)}
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.95rem}
-th{text-align:left;font-weight:600;color:var(--mute);padding:.7rem .8rem .7rem 0;border-bottom:1.5px solid var(--ink);white-space:nowrap}
-td{padding:.8rem .8rem .8rem 0;border-bottom:1px solid var(--line);vertical-align:top}
-td code{font:600 .88rem Consolas,monospace}
-.ac{white-space:nowrap}.lk{background:none;border:0;color:var(--mag);cursor:pointer;font:600 .9rem var(--body);text-decoration:underline;padding:0 .6rem 0 0}
-.inl{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.2rem}
-
-/* Standee dialog */
-dialog{position:fixed;inset:0;margin:auto;max-width:440px;width:92vw;border:2px solid var(--ink);border-radius:20px;padding:2rem;background:#fff}
-dialog::backdrop{background:rgba(24,27,38,.6)}
-.standee{border:3px solid var(--ink);padding:2rem;text-align:center;border-radius:14px;background:#fff}
-.standee .shop{font-family:var(--display);font-size:1.8rem;font-weight:700}
-.standee .sub{color:var(--ink2);margin-bottom:1.2rem}
-.acts{margin-top:1.5rem;display:flex;gap:1rem;justify-content:center}
-
-@media(max-width:900px){
-  .hero,.plans .layout,.authgrid,.figs{grid-template-columns:1fr;gap:2.5rem}
-  .flow ol{grid-template-columns:1fr}
-  .modes .cols{grid-template-columns:1fr}
-}
+#v-admin table{width:100%;border-collapse:collapse;font-size:.95rem}
+#v-admin th{text-align:left;font-weight:500;color:var(--mute);padding:.6rem .8rem .6rem 0;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+#v-admin td{padding:.8rem .8rem .8rem 0;border-bottom:1px solid var(--line);vertical-align:top}
+#v-admin td code{font:500 .9rem Consolas,"Courier New",monospace}
+#v-admin small{color:var(--mute)}
+.ac{white-space:nowrap}.lk{background:none;border:0;color:var(--mag);cursor:pointer;font:inherit;text-decoration:underline;padding:0 .6rem 0 0}
+.inl{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem}
+.inl label{display:block;font-weight:500;margin-bottom:.3rem}
+.inl input,.inl select{padding:.7rem .8rem;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit}
+@media (max-width:900px){.figs{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 
-<header id="hdr">
-  <div class="wrap">
-    <a class="logo" href="#/">Print<i>QR</i></a>
-    <nav>
-      <a href="#/">Home</a>
-      <a href="#/dashboard">Dashboard</a>
-      <span id="navauth"></span>
-    </nav>
-  </div>
+<header class="wrap" id="hdr">
+  <nav>
+    <a class="logo" href="#top">Print<i>QR</i></a>
+    <div><a class="link" href="#how">How it works</a><a class="link" href="#counter">The counter app</a><a class="link" href="#modes">Modes</a><a class="link" href="#plans">Plans</a>
+    <span id="navauth"></span></div>
+  </nav>
 </header>
 
-<!-- VIEW: HOME LANDING -->
-<div id="v-home">
-  <section class="hero wrap">
-    <div>
-      <h1>Customers scan. Pay with UPI. Your printer prints.</h1>
-      <p class="lead" style="margin-top:1.2rem">Stick one A4 standee on your counter. Customers upload files directly from their phone, pay via Razorpay UPI, and prints start automatically.</p>
-      <div class="cta">
-        <a class="btn mag" href="#/signup">Start 48-Hour Free Demo</a>
-        <a class="btn ghost" href="#/dashboard">Open Dashboard</a>
-      </div>
-    </div>
-    <div>
-      <div class="phone">
-        <div class="topbar"><span>PrintQR Counter</span><span>9:41 AM</span></div>
-        <div class="shopname">Sharma Xerox &amp; Prints</div>
-        <div class="box">
-          <div class="row"><span>File</span><b>Project_Doc.pdf</b></div>
-          <div class="row"><span>Pages</span><b id="demo-pages">12 pages</b></div>
-          <div class="row ctl">
-            <span>Color</span>
-            <div class="seg" style="width:130px"><button aria-pressed="true">B&amp;W</button><button aria-pressed="false">Color</button></div>
-          </div>
-          <div class="row ctl">
-            <span>Sides</span>
-            <div class="seg" style="width:130px"><button aria-pressed="true">1 Side</button><button aria-pressed="false">Both</button></div>
-          </div>
-          <button class="pay" type="button"><span>Pay with UPI</span><b>₹24</b></button>
-        </div>
-      </div>
-    </div>
-  </section>
+<div id="v-home"><main id="top">
+<section class="hero wrap">
+  <h1>Customers scan. Pay. Your printer prints.</h1>
+  <p class="lead">Stick one A4 standee on your counter. People send their own files from their phone and pay by UPI. You stop being the person who passes around pen drives.</p>
+  <div class="cta">
+    <a class="btn" href="#/signup">Start the 48-hour demo</a>
+    <a class="btn ghost" href="#how">Watch a customer print</a>
+  </div>
+  <div class="standee" aria-label="Example A4 standee">
+    <span class="reg a"></span><span class="reg b"></span>
+    <div class="shop">Sharma Xerox</div>
+    <div class="sub">Print from your phone</div>
+    <div class="qr" data-qr></div>
+    <div class="foot">Scan. Upload. Pay.<br><span>Prints right here.</span></div>
+    <div class="cmyk"><b style="background:#00A6D6"></b><b style="background:#D4175A"></b><b style="background:#FFD400"></b><b style="background:#181B26"></b></div>
+  </div>
+</section>
 
-  <section class="flow wrap">
-    <h2>How it works on your counter</h2>
-    <ol>
-      <li><b>Customer Scans QR</b><p>Scans the standee using their smartphone camera or any UPI app.</p></li>
-      <li><b>Upload &amp; Choose Options</b><p>Picks a PDF or photo, selects copies and color. Rates are set by you.</p></li>
-      <li><b>Instant UPI &amp; Print</b><p>Pays via Razorpay UPI. Razorpay Route automatically settles your share to your UPI VPA.</p></li>
+<section class="flow" id="how">
+  <div class="wrap grid">
+    <h2>What your customer sees</h2>
+    <div class="phone">
+      <div class="screen" id="screen">
+        <div class="top"><b>Sharma Xerox</b><small>Sample rates</small></div>
+        <div class="file"><div class="ico">PDF</div><div><b>Rent agreement.pdf</b><small>12 pages</small></div></div>
+        <div class="lockmsg">Set by the shop: black &amp; white, 1 copy.</div>
+        <div class="ctl">
+          <div class="seg" role="group" aria-label="Colour"><button aria-pressed="true" data-c="bw">Black &amp; white</button><button aria-pressed="false" data-c="col">Colour</button></div>
+        </div>
+        <div class="row ctl"><span>Copies</span><div class="step"><button aria-label="Fewer copies" data-d="-1">−</button><span id="cp">1</span><button aria-label="More copies" data-d="1">+</button></div></div>
+        <div class="row ctl"><span>Both sides</span><div class="seg" style="width:130px"><button aria-pressed="false" data-s="1">No</button><button aria-pressed="true" data-s="0">Yes</button></div></div>
+        <button class="pay"><span>Pay with UPI</span><b id="amt">₹24</b></button>
+      </div>
+    </div>
+    <ol class="steps">
+      <li><b>Scan the standee</b><p>The page opens in the browser. No app, no sign-up.</p></li>
+      <li><b>Upload the file</b><p>PDF, photo or Word document straight from the phone.</p></li>
+      <li><b>Pay in one tap</b><p>The UPI app opens with the amount filled in.</p></li>
+      <li><b>Pick it up</b><p>Payment clears and your printer starts. Nobody had to tell you.</p></li>
     </ol>
-  </section>
-</div>
+    <div class="modeswitch"><div class="seg" id="modeseg" role="group" aria-label="Preview shop mode"><button aria-pressed="true" data-m="0">Customer chooses</button><button aria-pressed="false" data-m="1">Shop locked</button></div></div>
+  </div>
+</section>
 
-<!-- VIEW: AUTHENTICATION -->
-<main id="v-auth" class="wrap" hidden>
-  <div class="authgrid">
+<section class="counter" id="counter">
+  <div class="wrap">
+    <div class="head">
+      <h2>One small app on your billing PC</h2>
+      <p>Install the Windows app, type your key, and map your printers. It sits quietly in the background and receives paid jobs. Open the standee from the QR button, top right, and print as many copies as you like.</p>
+    </div>
+    <div class="win" role="img" aria-label="Preview of the PrintQR Windows app">
+      <div class="titlebar"><i></i><i></i><i></i></div>
+      <div class="bar">
+        <div class="who"><div class="av">SX</div><div><b>Sharma Xerox</b><small>Gaya counter 1</small></div></div>
+        <div class="kv"><small>Key runs out in</small><b id="cd">41d 06h 12m</b></div>
+        <div class="kv"><small>Active plan</small><b>6 months</b></div>
+        <button class="qrbtn" id="openqr" aria-label="Open QR standee"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#181B26" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3h-3z"/></svg></button>
+      </div>
+      <div class="slots">
+        <h3>Printer slots</h3>
+        <div class="slotgrid">
+          <div class="slot"><small>Black &amp; white</small><b>HP LaserJet 1020</b><div class="pr"><span class="dot"></span>Ready</div></div>
+          <div class="slot"><small>Colour</small><b>Epson L3250</b><div class="pr"><span class="dot"></span>Ready</div></div>
+          <div class="slot"><small>Duplex</small><b>Brother DCP-L2541</b><div class="pr"><span class="dot"></span>Ready</div></div>
+          <div class="slot empty"><small>Photo</small><b>Not mapped</b><div class="pr">Pick a printer</div></div>
+        </div>
+        <div class="pm"><div><b>Customer chooses</b>Page range, colour and copies come from the customer's phone.</div><div><b>Shop locked</b>Your defaults are fixed. The customer only uploads.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="modes wrap" id="modes">
+  <h2 class="intro">Decide how much choice customers get</h2>
+  <div class="cols">
     <div>
-      <h1 id="authT">Create Account</h1>
-      <p id="authP" class="lead2">Start running your automated print counter today.</p>
+      <div class="big">Open</div>
+      <h3>Customer chooses</h3>
+      <p>Good for busy shops with mixed jobs. Customers set pages, colour and copies on their phone, and the right printer slot is picked for them.</p>
     </div>
-    <form id="authF" novalidate>
-      <div id="nmw"><label for="a_name">Your Name</label><input id="a_name" autocomplete="name"></div>
-      <label for="a_email">Email</label><input id="a_email" type="email" autocomplete="email">
-      <label for="a_pw">Password</label><input id="a_pw" type="password" autocomplete="current-password">
-      <div class="err" id="a_err" role="alert"></div>
-      <button class="btn mag" id="a_btn" type="submit" style="width:100%;margin-top:1.4rem">Sign Up</button>
-      <p class="swap"><span id="a_sw">Already have an account?</span> <a id="a_lnk" href="#/login">Log In</a></p>
-    </form>
-  </div>
-</main>
-
-<!-- VIEW: DASHBOARD (SELLER ROUTE & SOFTWARE KEYS) -->
-<main id="v-dash" class="wrap" hidden>
-  <div class="dhead">
-    <h1 id="dhi">Shop Dashboard</h1>
-    <p class="lead2">Manage your counter activation keys, shop printers, and UPI marketplace payouts.</p>
-  </div>
-
-  <div class="dtabs" role="tablist">
-    <button role="tab" id="tab-btn-keys" aria-selected="true" onclick="setDashTab('keys')">Software Keys &amp; Agent</button>
-    <button role="tab" id="tab-btn-seller" aria-selected="false" onclick="setDashTab('seller')">Seller Route &amp; UPI Payouts</button>
-  </div>
-
-  <!-- TAB 1: KEYS & DOWNLOAD -->
-  <div id="dash-panel-keys">
-    <section class="dsec">
-      <h2>Software Plans</h2>
-      <ul class="planlist" id="planlist"></ul>
-      <div id="buybox"></div>
-    </section>
-
-    <section class="dsec">
-      <h2>Your Counter Keys</h2>
-      <div id="keys"></div>
-    </section>
-
-    <section class="dsec">
-      <h2>Shop PC Agent App</h2>
-      <div class="dl">
-        <a class="btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows (Zip)</a>
-      </div>
-      <ol class="inst">
-        <li><b>Unzip</b> the download on your shop billing PC.</li>
-        <li><b>Double-click install-and-run.bat</b> to launch the agent app.</li>
-        <li><b>Enter your counter key</b> and the server address when prompted.</li>
-        <li><b>Select your printers</b> for B&amp;W and Color, then print the standee QR code.</li>
-      </ol>
-    </section>
-  </div>
-
-  <!-- TAB 2: SELLER ROUTE & PAYOUTS -->
-  <div id="dash-panel-seller" hidden>
-    <div id="seller-alert-box"></div>
-
-    <section class="dsec">
-      <h2>Seller Onboarding (Razorpay Route)</h2>
-      <p style="color:var(--ink2);margin-bottom:1.5rem">
-        Connect your UPI ID so customer payments on your counter are routed directly into your bank account.
-        <br><small style="color:var(--mute)">NOTE: VPA Settlements must be enabled by Razorpay support for your account first.</small>
-      </p>
-
-      <div id="seller-onboard-card" class="card" style="max-width:620px">
-        <form id="seller-form">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-            <div><label for="s_name">Legal / Business Name *</label><input id="s_name" placeholder="Sharma Xerox" required></div>
-            <div><label for="s_email">Email *</label><input id="s_email" type="email" placeholder="sharma@example.com" required></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-            <div><label for="s_phone">10-Digit Mobile *</label><input id="s_phone" placeholder="9876543210" maxlength="10" required></div>
-            <div><label for="s_pan">PAN Card Number</label><input id="s_pan" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase"></div>
-          </div>
-          <div>
-            <label for="s_upi">UPI ID / VPA for Payouts *</label>
-            <input id="s_upi" placeholder="yourname@okhdfcbank or 9876543210@paytm" required>
-            <small style="color:var(--ink2);display:block;margin-top:.3rem">All print job earnings will settle directly to this UPI address.</small>
-          </div>
-          <div class="err" id="seller-err"></div>
-          <button class="btn mag" type="submit" id="seller-submit-btn" style="margin-top:1.2rem">Save &amp; Connect Razorpay Account</button>
-        </form>
-      </div>
-
-      <div id="seller-active-card" class="card" style="max-width:620px" hidden>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <span class="pill on" id="seller-status-pill">Activated</span>
-            <h3 id="seller-display-name" style="margin-top:.6rem"></h3>
-            <p style="color:var(--ink2);font-size:.9rem">Linked Account ID: <code id="seller-account-id"></code></p>
-          </div>
-        </div>
-        <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--line)">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <small style="color:var(--mute)">Verified UPI Beneficiary</small>
-              <b id="seller-beneficiary-name" style="display:block;font-size:1.05rem"></b>
-              <code id="seller-vpa-display" style="font-size:1rem;color:var(--mag)"></code>
-            </div>
-            <button class="btn ghost" type="button" onclick="showUpdateUpiModal()">Change UPI</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Financial Metrics -->
-    <section class="dsec">
-      <h2>Payouts &amp; Marketplace Earnings</h2>
-      <div class="grid4">
-        <div class="card">
-          <small>Gross Customer Volume</small>
-          <b id="stat-gross">₹0</b>
-          <div class="subtext">From counter print jobs</div>
-        </div>
-        <div class="card">
-          <small>Platform Fee Deducted</small>
-          <b id="stat-fee" style="color:var(--mute)">₹0</b>
-          <div class="subtext">Configurable platform fee</div>
-        </div>
-        <div class="card">
-          <small>Net Transferred to You</small>
-          <b id="stat-net" style="color:var(--green)">₹0</b>
-          <div class="subtext">Direct UPI VPA settlements</div>
-        </div>
-        <div class="card">
-          <small>Payout Status</small>
-          <b id="stat-payouts">0 Done</b>
-          <div class="subtext" id="stat-payouts-sub">0 pending</div>
-        </div>
-      </div>
-
-      <h3>Orders &amp; Payment History</h3>
-      <div class="tw" style="margin-top:1rem">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Order ID</th>
-              <th>File</th>
-              <th>Customer Paid</th>
-              <th>Platform Fee</th>
-              <th>Your Share (UPI)</th>
-              <th>Payment</th>
-              <th>UPI Payout</th>
-            </tr>
-          </thead>
-          <tbody id="seller-orders-table">
-            <tr><td colspan="8">No counter print orders yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </div>
-</main>
-
-<!-- VIEW: BUYER / CUSTOMER PRINT FLOW -->
-<main id="v-cust" hidden>
-  <div id="cust-header">
-    <h1 id="c-shopname">Print Counter</h1>
-    <p class="sub">Upload your file, pay with UPI, and it prints here automatically.</p>
-  </div>
-
-  <label class="drop" id="drop">
-    <input type="file" id="file" accept="application/pdf,image/*">
-    <b id="dt">Choose a PDF or photo</b><br>
-    <small id="ds">Tap to upload</small>
-  </label>
-  <div class="err" id="ce"></div>
-
-  <div class="cbox" id="cb" hidden>
-    <div id="locked-options" hidden class="lockedbox"></div>
-    <div id="interactive-options">
-      <label>Colour</label>
-      <div class="seg" id="sc">
-        <button type="button" aria-pressed="true" data-v="bw">Black &amp; white</button>
-        <button type="button" aria-pressed="false" data-v="col">Colour</button>
-      </div>
-
-      <label for="cp">Copies</label>
-      <input id="cp" type="number" min="1" max="99" value="1">
-
-      <label>Sides</label>
-      <div class="seg" id="sd">
-        <button type="button" aria-pressed="true" data-v="0">One side</button>
-        <button type="button" aria-pressed="false" data-v="1">Both sides</button>
-      </div>
-
-      <label for="rg">Pages (leave blank for all)</label>
-      <input id="rg" placeholder="e.g. 1-3,5">
+    <div>
+      <div class="big out">Locked</div>
+      <h3>You choose</h3>
+      <p>Good for a single repeat job, like black and white A4. You set the defaults once. Customers upload and pay, and nothing else can go wrong.</p>
     </div>
-
-    <!-- Pay now button -->
-    <button class="btn mag" id="pay" type="button">Pay with UPI / Cards (Razorpay)</button>
   </div>
+</section>
 
-  <!-- Dynamic payment status / success / failure state container -->
-  <div id="stt"></div>
-</main>
+<section class="plans wrap" id="plans">
+  <div class="layout">
+    <div>
+      <h2>Pick how long your key lasts</h2>
+      <p style="margin-top:1.4rem;color:var(--ink2)">You choose the plan in your web dashboard. The key appears there right away. Prices are shown in the dashboard.</p>
+    </div>
+    <ul>
+      <li><b>48 hours</b><span>A full working demo. Try it on a real counter with real customers.</span><em>Free to try</em></li>
+      <li><b>3 months</b><span>For a new shop or a busy season.</span><em></em></li>
+      <li><b>6 months</b><span>Half a year with no renewal to remember.</span><em></em></li>
+      <li><b>12 months</b><span>One key for the whole year.</span><em></em></li>
+    </ul>
+  </div>
+</section>
 
-<!-- VIEW: ADMIN DASHBOARD -->
+<section class="end" id="start">
+  <div class="wrap in">
+    <div>
+      <h2>Your first print can happen today</h2>
+      <p style="margin-top:1.2rem">Make a key in the dashboard, install the app on your PC, and print the standee. About ten minutes.</p>
+    </div>
+    <a class="btn" href="#/dashboard">Open the dashboard</a>
+  </div>
+</section>
+</main></div>
+
+<main id="v-auth" class="wrap" hidden><div class="authgrid"><div><h1 id="authT"></h1><p id="authP" class="lead2"></p></div>
+<form id="authF" novalidate><div id="nmw"><label for="a_name">Your name</label><input id="a_name" autocomplete="name"></div>
+<label for="a_email">Email</label><input id="a_email" type="email" autocomplete="email">
+<label for="a_pw">Password</label><input id="a_pw" type="password" autocomplete="current-password">
+<div class="err" id="a_err" role="alert"></div>
+<button class="btn" id="a_btn" type="submit"></button>
+<p class="swap"><span id="a_sw"></span> <a id="a_lnk" href="#"></a></p></form></div></main>
+<main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, get your key, install the app on your shop PC.</p></div>
+<section class="dsec"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
+<section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
+<section class="dsec"><h2>Download and install</h2>
+<div class="dl"><a class="btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
+<ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> and the server address when the app asks.</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol></section></main>
+<main id="v-cust" hidden></main>
 <main id="v-admin" class="wrap" hidden></main>
 
-<!-- STANDALONE QR MODAL -->
-<dialog id="qrmodal" aria-label="A4 Standee">
+<footer id="ftr"><div class="wrap"><span>PrintQR for print shops</span><span>Payments go through UPI. The shop keeps its own money.</span></div></footer>
+
+<dialog id="qrmodal" aria-label="A4 standee">
   <div class="standee">
-    <div class="shop" id="m-shopname">PrintQR Standee</div>
-    <div class="sub">Print from your phone in seconds</div>
-    <div class="qr" id="modal-qr" data-qr></div>
-    <div style="font-weight:700;margin-top:1rem">Scan with any Camera or UPI App</div>
+    <span class="reg a"></span><span class="reg b"></span>
+    <div class="shop">Sharma Xerox</div>
+    <div class="sub">Print from your phone</div>
+    <div class="qr" data-qr></div>
+    <div class="foot">Scan. Upload. Pay.<br><span>Prints right here.</span></div>
   </div>
-  <div class="acts">
-    <button class="btn" onclick="window.print()">Print Standee</button>
-    <button class="btn ghost" id="closeqr">Close</button>
-  </div>
+  <div class="acts"><button class="btn" onclick="window.print()">Print A4 standee</button><button class="btn ghost" id="closeqr">Close</button></div>
 </dialog>
-
-<!-- UPDATE UPI MODAL -->
-<dialog id="upimodal" aria-label="Update UPI ID">
-  <form id="update-upi-form" style="padding:1rem">
-    <h3>Update UPI Address</h3>
-    <p style="color:var(--ink2);font-size:.9rem;margin-top:.4rem">Future payouts will be routed to this VPA address.</p>
-    <div style="margin-top:1.2rem">
-      <label for="u_upi">New UPI ID (VPA)</label>
-      <input id="u_upi" placeholder="yourname@okhdfcbank" required>
-    </div>
-    <div class="err" id="u_err"></div>
-    <div style="display:flex;gap:.8rem;margin-top:1.5rem">
-      <button class="btn mag" type="submit" id="u_btn">Save UPI ID</button>
-      <button class="btn ghost" type="button" onclick="$('upimodal').close()">Cancel</button>
-    </div>
-  </form>
-</dialog>
-
-<footer id="ftr">
-  <div class="wrap">
-    <span>PrintQR &copy; 2026 - Instant automated print counter</span>
-    <span>Powered by Razorpay &amp; Razorpay Route (UPI VPA Settlements)</span>
-  </div>
-</footer>
 
 <script>
-const $ = id => document.getElementById(id);
-const tk = () => localStorage.getItem('pq_token');
-const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const inr = n => '₹' + (Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const fmt = t => t ? new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-
-const api = async (p, body) => {
-  const o = { headers: { 'Content-Type': 'application/json' } };
-  if (tk()) o.headers.Authorization = 'Bearer ' + tk();
-  if (body) { o.method = 'POST'; o.body = JSON.stringify(body); }
-  const r = await fetch(p, o);
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e = new Error(j.error || 'Something went wrong');
-    e.status = r.status;
-    throw e;
+/* Decorative QR placeholder (not scannable). Replace with a real QR for ?shopId=XYZ */
+(function(){
+  var N=25,seed=7,r=function(){seed=(seed*16807)%2147483647;return seed/2147483647},cells=[];
+  function finder(x,y){return(x<7&&y<7)||(x>=N-7&&y<7)||(x<7&&y>=N-7)}
+  var s='<svg viewBox="0 0 '+N+' '+N+'" width="100%" shape-rendering="crispEdges" role="img" aria-label="QR code placeholder">';
+  for(var y=0;y<N;y++)for(var x=0;x<N;x++){
+    if(finder(x,y))continue;
+    if(r()>.52)s+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="#181B26"/>';
   }
-  return j;
-};
+  [[0,0],[N-7,0],[0,N-7]].forEach(function(p){
+    s+='<rect x="'+p[0]+'" y="'+p[1]+'" width="7" height="7" fill="#181B26"/><rect x="'+(p[0]+1)+'" y="'+(p[1]+1)+'" width="5" height="5" fill="#fff"/><rect x="'+(p[0]+2)+'" y="'+(p[1]+2)+'" width="3" height="3" fill="#181B26"/>';
+  });
+  s+='</svg>';
+  document.querySelectorAll('[data-qr]').forEach(function(e){e.innerHTML=s});
+})();
 
-// Views routing
-const views = ['home', 'auth', 'dash', 'cust', 'admin'];
-const show = v => views.forEach(x => {
-  const el = $('v-' + x);
-  if (el) el.hidden = (x !== v);
-});
-
-function nav() {
-  $('navauth').innerHTML = tk()
-    ? (localStorage.getItem('pq_admin') === '1' ? '<a class="link" href="#/admin" style="color:var(--mag);font-weight:600">Admin</a>' : '')
-      + '<a class="btn ghost" style="margin-left:1.4rem;padding:.5rem 1rem" href="#/dashboard">Dashboard</a>'
-      + '<a class="link" href="#" id="lo" style="margin-left:1rem;color:var(--ink2)">Log out</a>'
-    : '<a class="link" href="#/login">Log in</a> <a class="btn mag" style="margin-left:.8rem;padding:.5rem 1.1rem" href="#/signup">Sign up</a>';
-  const lo = $('lo');
-  if (lo) lo.onclick = e => {
-    e.preventDefault();
-    localStorage.removeItem('pq_token');
-    localStorage.removeItem('pq_admin');
-    location.hash = '#/';
-    route();
-  };
-}
-
-// ----------------------------------------------------
-// TAB CONTROLLER
-// ----------------------------------------------------
-function setDashTab(tab) {
-  const isSeller = tab === 'seller';
-  $('tab-btn-keys').setAttribute('aria-selected', !isSeller);
-  $('tab-btn-seller').setAttribute('aria-selected', isSeller);
-  $('dash-panel-keys').hidden = isSeller;
-  $('dash-panel-seller').hidden = !isSeller;
-  if (isSeller) loadSellerDashboard();
-}
-
-function showUpdateUpiModal() {
-  const m = $('upimodal');
-  $('u_err').textContent = '';
-  m.showModal();
-}
-
-// ----------------------------------------------------
-// AUTHENTICATION
-// ----------------------------------------------------
-function auth(mode) {
-  show('auth');
-  const su = mode === 'signup';
-  $('authT').textContent = su ? 'Make your shop account' : 'Welcome back';
-  $('authP').textContent = su ? 'Free to sign up. Test your counter on any PC.' : 'Log in to manage your keys, shop printers, and UPI payouts.';
-  $('nmw').hidden = !su;
-  $('a_btn').textContent = su ? 'Create account' : 'Log in';
-  $('a_sw').textContent = su ? 'Already have an account?' : 'New here?';
-  $('a_lnk').textContent = su ? 'Log in' : 'Sign up';
-  $('a_lnk').href = su ? '#/login' : '#/signup';
-  $('a_err').textContent = '';
-
-  $('authF').onsubmit = async e => {
-    e.preventDefault();
-    $('a_err').textContent = '';
-    $('a_btn').disabled = true;
-    try {
-      const r = await api(su ? '/api/signup' : '/api/login', {
-        name: $('a_name').value.trim(),
-        email: $('a_email').value.trim(),
-        password: $('a_pw').value
-      });
-      localStorage.setItem('pq_token', r.token);
-      r.admin ? localStorage.setItem('pq_admin', '1') : localStorage.removeItem('pq_admin');
-      location.hash = r.admin ? '#/admin' : '#/dashboard';
-    } catch (x) {
-      $('a_err').textContent = x.message;
-    } finally {
-      $('a_btn').disabled = false;
+/* Phone preview */
+(function(){
+  var col=false,copies=1,duplex=true,pages=12,screen=document.getElementById('screen');
+  function upd(){
+    var rate=col?10:2; if(duplex) rate*=0.9;
+    document.getElementById('amt').textContent='₹'+Math.round(pages*rate*copies);
+    document.getElementById('cp').textContent=copies;
+  }
+  function seg(sel,fn){document.querySelectorAll(sel+' button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll(sel+' button').forEach(function(x){x.setAttribute('aria-pressed','false')});
+    b.setAttribute('aria-pressed','true');fn(b)})})}
+  seg('[aria-label="Colour"]',function(b){col=b.dataset.c==='col';upd()});
+  seg('[data-s]'.replace('[data-s]','.row .seg'),function(b){duplex=b.dataset.s==='0';upd()});
+  document.querySelectorAll('.step button').forEach(function(b){b.addEventListener('click',function(){
+    copies=Math.max(1,Math.min(99,copies+Number(b.dataset.d)));upd()})});
+  document.querySelectorAll('#modeseg button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('#modeseg button').forEach(function(x){x.setAttribute('aria-pressed','false')});
+    b.setAttribute('aria-pressed','true');
+    var locked=b.dataset.m==='1';screen.classList.toggle('locked',locked);
+    if(locked){col=false;copies=1;duplex=false;
+      screen.querySelectorAll('[aria-label="Colour"] button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.c==='bw')});
+      screen.querySelectorAll('.row .seg button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.s==='1')});
     }
-  };
-}
+    upd()})});
+  upd();
+})();
 
-// ----------------------------------------------------
-// DASHBOARD: KEYS & PLANS
-// ----------------------------------------------------
-async function dash() {
-  if (!tk()) { location.hash = '#/login'; return; }
+/* Key countdown */
+(function(){
+  var end=Date.now()+(41*864e5+6*36e5+12*6e4),el=document.getElementById('cd');
+  function t(){var d=Math.max(0,end-Date.now()),D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4);
+    el.textContent=D+'d '+String(H).padStart(2,'0')+'h '+String(M).padStart(2,'0')+'m'}
+  t();setInterval(t,30000);
+})();
+
+/* Standee modal */
+(function(){
+  var m=document.getElementById('qrmodal');
+  document.getElementById('openqr').addEventListener('click',function(){m.showModal()});
+  document.getElementById('closeqr').addEventListener('click',function(){m.close()});
+  m.addEventListener('click',function(e){if(e.target===m)m.close()});
+})();
+</script>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id),tk=()=>localStorage.getItem('pq_token');
+const api=async(p,body)=>{const o={headers:{'Content-Type':'application/json'}};if(tk())o.headers.Authorization='Bearer '+tk();if(body){o.method='POST';o.body=JSON.stringify(body)}
+  const r=await fetch(p,o);const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||'Something went wrong');e.status=r.status;throw e}return j};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const views=['home','auth','dash','cust','admin'];
+const show=v=>views.forEach(x=>$('v-'+x).hidden=x!==v);
+
+function nav(){$('navauth').innerHTML=tk()?(localStorage.getItem('pq_admin')==='1'?'<a class="link" href="#/admin" style="margin-left:1.6rem;text-decoration:none;color:var(--mag);font-weight:500">Admin</a>':'')+'<a class="btn ghost" style="margin-left:1.6rem;padding:.6rem 1.1rem" href="#/dashboard">Dashboard</a> <a class="link" href="#" id="lo" style="margin-left:1rem;text-decoration:none;color:var(--ink2)">Log out</a>'
+  :'<a class="link" href="#/login" style="margin-left:1.6rem;text-decoration:none;color:var(--ink2)">Log in</a> <a class="btn" style="margin-left:1rem;padding:.6rem 1.1rem" href="#/signup">Sign up</a>';
+  const lo=$('lo');if(lo)lo.onclick=e=>{e.preventDefault();localStorage.removeItem('pq_token');localStorage.removeItem('pq_admin');location.hash='#/';route()}}
+/* ---- auth ---- */
+function auth(mode){
+  show('auth');const su=mode==='signup';
+  $('authT').textContent=su?'Make your shop account':'Welcome back';
+  $('authP').textContent=su?'Free to sign up. Try the 48-hour demo on your own counter.':'Log in to see your keys and download the app.';
+  $('nmw').hidden=!su;$('a_btn').textContent=su?'Create account':'Log in';
+  $('a_sw').textContent=su?'Already have an account?':'New here?';$('a_lnk').textContent=su?'Log in':'Sign up';$('a_lnk').href=su?'#/login':'#/signup';
+  $('a_err').textContent='';
+  $('authF').onsubmit=async e=>{e.preventDefault();$('a_err').textContent='';
+    try{const r=await api(su?'/api/signup':'/api/login',{name:$('a_name').value.trim(),email:$('a_email').value.trim(),password:$('a_pw').value});
+      localStorage.setItem('pq_token',r.token);r.admin?localStorage.setItem('pq_admin','1'):localStorage.removeItem('pq_admin');location.hash=r.admin?'#/admin':'#/dashboard'}catch(x){$('a_err').textContent=x.message}}
+}
+/* ---- dashboard ---- */
+async function dash(){
+  if(!tk()){location.hash='#/login';return}
   show('dash');
-
-  let me;
-  try {
-    me = await api('/api/me');
-  } catch (e) {
-    localStorage.removeItem('pq_token');
-    location.hash = '#/login';
-    return;
-  }
-
-  $('dhi').textContent = 'Hi ' + me.name.split(' ')[0] + ', welcome to your shop.';
-
-  const plans = [
-    ['demo', '48-hour demo', 'Try everything for two days. One per account.', null],
-    ['3m', '3 months', 'For a new shop or a busy season.', me.prices['3m']],
-    ['6m', '6 months', 'Half a year, no renewal to remember.', me.prices['6m']],
-    ['12m', '12 months', 'One key for the whole year.', me.prices['12m']]
-  ];
-
-  $('planlist').innerHTML = plans.map(p =>
-    '<li><b>' + p[1] + '</b><span>' + p[2] + '</span><span class="pr">' + (p[3] ? inr(p[3]) : 'Free') + '</span>'
-    + '<button class="btn ghost" data-p="' + p[0] + '"' + (p[0] === 'demo' && me.demoUsed ? ' disabled style="opacity:.4;cursor:default"' : '') + '>'
-    + (p[0] === 'demo' && me.demoUsed ? 'Used' : 'Select') + '</button></li>'
-  ).join('');
-
-  $('buybox').innerHTML = '';
-  $('planlist').querySelectorAll('button[data-p]').forEach(b => b.onclick = () => {
-    if (b.disabled) return;
-    const p = plans.find(x => x[0] === b.dataset.p);
-    $('buybox').innerHTML = '<div class="buybox"><p><b>' + p[1] + '</b>' + (p[3] ? ' for ' + inr(p[3]) + '.' : '. No payment needed.') + ' Your activation key appears below right after.</p>'
-      + '<button class="btn mag" id="go">' + (p[3] ? 'Pay ' + inr(p[3]) + ' with Razorpay' : 'Get my demo key') + '</button>'
-      + '<button class="btn ghost" id="no">Cancel</button><div class="err" id="be"></div></div>';
-
-    $('no').onclick = () => $('buybox').innerHTML = '';
-    $('go').onclick = async () => {
-      $('go').disabled = true;
-      $('be').textContent = '';
-      try {
-        if (p[0] === 'demo') {
-          await api('/api/buy', { plan: p[0] });
-          await dash();
-        } else {
-          // BUYER FLOW FOR SOFTWARE PLAN
-          const order = await api('/api/payment/create-order', { type: 'plan', plan: p[0] });
-          const rzpInstance = new Razorpay({
-            key: order.keyId,
-            amount: order.amountPaise,
-            currency: 'INR',
-            name: 'PrintQR Software',
-            description: order.description,
-            order_id: order.orderId,
-            handler: async response => {
-              try {
-                await api('/api/payment/verify', { ...response, type: 'plan', itemId: p[0] });
-                await dash();
-              } catch (err) {
-                $('be').textContent = 'Verification error: ' + err.message;
-              }
-            },
-            theme: { color: '#D4175A' }
-          });
-          rzpInstance.open();
-        }
-      } catch (e) {
-        $('be').textContent = e.message;
-        $('go').disabled = false;
-      }
-    };
-  });
-
-  const ks = await api('/api/keys');
-  $('keys').innerHTML = ks.length ? ks.map(k =>
-    '<div class="keyrow"><code>' + esc(k.key) + '</code>'
-    + '<button class="btn ghost" data-c="' + esc(k.key) + '" style="padding:.4rem .8rem">Copy</button>'
-    + '<span class="meta">' + esc(k.planName) + (k.status === 'active' ? ' – runs until ' + fmt(k.expiresAt) : k.status === 'expired' ? ' – ended ' + fmt(k.expiresAt) : ' – timer starts when activated') + '</span>'
-    + '<span class="pill ' + (k.status === 'active' ? 'on' : k.status === 'expired' ? 'off' : '') + '">' + (k.status === 'waiting' ? 'Not activated' : k.status === 'active' ? 'Active' : 'Expired') + '</span></div>'
-  ).join('') : '<p style="color:var(--ink2)">No counter keys yet. Select a plan above to generate your first key.</p>';
-
-  $('keys').querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
-    navigator.clipboard && navigator.clipboard.writeText(b.dataset.c);
-    b.textContent = 'Copied';
-    setTimeout(() => b.textContent = 'Copy', 1500);
-  });
+  let me;try{me=await api('/api/me')}catch(e){localStorage.removeItem('pq_token');location.hash='#/login';return}
+  $('dhi').textContent='Hi '+me.name.split(' ')[0]+', let\u2019s get your shop set up.';
+  const plans=[['demo','48-hour demo','Try everything for two days. One per account.',null],['3m','3 months','For a new shop or a busy season.',me.prices['3m']],['6m','6 months','Half a year, no renewal to remember.',me.prices['6m']],['12m','12 months','One key for the whole year.',me.prices['12m']]];
+  $('planlist').innerHTML=plans.map(p=>'<li><b>'+p[1]+'</b><span>'+p[2]+'</span><span class="pr">'+(p[3]?'\u20B9'+p[3]:'Free')+'</span><button class="btn ghost" data-p="'+p[0]+'"'+(p[0]==='demo'&&me.demoUsed?' disabled style="opacity:.4;cursor:default"':'')+'>'+(p[0]==='demo'&&me.demoUsed?'Used':'Select')+'</button></li>').join('');
+  $('buybox').innerHTML='';
+  $('planlist').querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const p=plans.find(x=>x[0]===b.dataset.p);
+    $('buybox').innerHTML='<div class="buybox"><p><b>'+p[1]+'</b>'+(p[3]?' for \u20B9'+p[3]+'.':'. No payment needed.')+' Your activation key appears below right after.</p><button class="btn" id="go">'+(p[3]?'Pay \u20B9'+p[3]+' and get key':'Get my demo key')+'</button><button class="btn ghost" id="no">Cancel</button><div class="err" id="be"></div></div>';
+    $('no').onclick=()=>$('buybox').innerHTML='';
+    $('go').onclick=async()=>{try{
+      const r=await api('/api/buy',{plan:p[0]});
+      if(r.order){await load('https://checkout.razorpay.com/v1/checkout.js');
+        await new Promise((ok,no)=>rzpPay(r,async x=>{try{await api('/api/buy/verify',x);ok()}catch(e){no(e)}},no,p[1]+' plan'))}
+      await dash();$('keys').scrollIntoView({behavior:'smooth'})}catch(e){$('be').textContent=e.message}}});
+  const ks=await api('/api/keys');
+  const fmt=t=>new Date(t).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
+  $('keys').innerHTML=ks.length?ks.map(k=>'<div class="keyrow"><code>'+esc(k.key)+'</code><button class="btn ghost" data-c="'+esc(k.key)+'" style="padding:.45rem .9rem">Copy</button><span class="meta">'+esc(k.planName)+(k.status==='active'?' \u2013 runs until '+fmt(k.expiresAt):k.status==='expired'?' \u2013 ended '+fmt(k.expiresAt):' \u2013 timer starts when you activate')+'</span><span class="pill '+(k.status==='active'?'on':k.status==='expired'?'off':'')+'">'+(k.status==='waiting'?'Not activated':k.status==='active'?'Active':'Expired')+'</span></div>').join('')
+    :'<p>No keys yet. Select a plan above and your key will show up here.</p>';
+  $('keys').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)});
 }
-
-// ----------------------------------------------------
-// DASHBOARD: SELLER ROUTE & PAYOUTS
-// ----------------------------------------------------
-async function loadSellerDashboard() {
-  try {
-    const data = await api('/api/seller/dashboard');
-    const s = data.seller;
-
-    // Display payout notification alert if any
-    const alertBox = $('seller-alert-box');
-    if (s && s.payout_notification) {
-      alertBox.innerHTML = '<div class="notice"><b>Payout Notice:</b> ' + esc(s.payout_notification) + '</div>';
-    } else {
-      alertBox.innerHTML = '';
-    }
-
-    if (s && s.linked_account_id) {
-      $('seller-onboard-card').hidden = true;
-      $('seller-active-card').hidden = false;
-      $('seller-display-name').textContent = s.name;
-      $('seller-account-id').textContent = s.linked_account_id;
-      $('seller-beneficiary-name').textContent = s.beneficiary_name || s.name;
-      $('seller-vpa-display').textContent = s.upi_id;
-      $('seller-status-pill').textContent = s.status === 'activated' ? 'Active & Settling via UPI' : esc(s.status);
-    } else {
-      $('seller-onboard-card').hidden = false;
-      $('seller-active-card').hidden = true;
-    }
-
-    // Stats
-    const st = data.stats;
-    $('stat-gross').textContent = inr(st.grossVolume);
-    $('stat-fee').textContent = inr(st.platformFees);
-    $('stat-net').textContent = inr(st.netEarnings);
-    $('stat-payouts').textContent = st.payouts.completed + ' Paid';
-    $('stat-payouts-sub').textContent = st.payouts.pending + ' pending, ' + st.payouts.failed + ' failed';
-
-    // Orders table
-    const tbody = $('seller-orders-table');
-    if (data.orders && data.orders.length) {
-      tbody.innerHTML = data.orders.map(o =>
-        '<tr>'
-        + '<td>' + fmt(o.created_at) + '</td>'
-        + '<td><code>' + esc(o.razorpay_order_id || o.id) + '</code></td>'
-        + '<td>' + esc(o.filename) + '</td>'
-        + '<td><b>' + inr(o.amount) + '</b></td>'
-        + '<td style="color:var(--mute)">' + inr(o.platform_fee_amount || 0) + '</td>'
-        + '<td style="color:var(--green)"><b>' + inr(o.seller_share_amount || o.amount) + '</b></td>'
-        + '<td><span class="pill ' + (o.status === 'paid' ? 'on' : o.status === 'refunded' ? 'off' : '') + '">' + esc(o.status) + '</span></td>'
-        + '<td><span class="pill ' + (o.payout_status === 'completed' ? 'on' : o.payout_status === 'failed' ? '' : 'off') + '">' + esc(o.payout_status || 'pending') + '</span></td>'
-        + '</tr>'
-      ).join('');
-    } else {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--mute);padding:1.5rem">No customer print payments yet.</td></tr>';
-    }
-  } catch (err) {
-    console.error('Error loading seller dashboard:', err);
-  }
+/* ---- customer ---- */
+function rzpPay(r,done,fail,desc){
+  if(!window.Razorpay){fail(new Error('Could not load the payment window. Check your internet and try again.'));return}
+  const o=new Razorpay({key:r.keyId,order_id:r.order.id,amount:r.order.amount,currency:'INR',name:'PrintQR',description:desc,
+    theme:{color:'#b3135b'},handler:done,modal:{ondismiss:()=>fail(new Error('Payment cancelled.'))}});
+  o.on('payment.failed',e=>fail(new Error((e.error&&e.error.description)||'Payment failed.')));o.open();
 }
-
-// Seller Onboard Form Submit
-$('seller-form').onsubmit = async e => {
-  e.preventDefault();
-  const btn = $('seller-submit-btn');
-  const err = $('seller-err');
-  err.textContent = '';
-  btn.disabled = true;
-
-  const upi = $('s_upi').value.trim();
-  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-  if (!upiRegex.test(upi)) {
-    err.textContent = 'Please enter a valid UPI ID (e.g. yourname@okhdfcbank or 9876543210@paytm).';
-    btn.disabled = false;
-    return;
-  }
-
-  try {
-    await api('/api/seller/onboard', {
-      name: $('s_name').value.trim(),
-      email: $('s_email').value.trim(),
-      phone: $('s_phone').value.trim(),
-      pan: $('s_pan').value.trim().toUpperCase(),
-      upi_id: upi
-    });
-    await loadSellerDashboard();
-  } catch (x) {
-    err.textContent = x.message;
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-// Update UPI Form Submit
-$('update-upi-form').onsubmit = async e => {
-  e.preventDefault();
-  const upi = $('u_upi').value.trim();
-  const err = $('u_err');
-  const btn = $('u_btn');
-  err.textContent = '';
-  btn.disabled = true;
-
-  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-  if (!upiRegex.test(upi)) {
-    err.textContent = 'Invalid UPI ID format. Example: yourname@okhdfcbank';
-    btn.disabled = false;
-    return;
-  }
-
-  try {
-    await api('/api/seller/update-upi', { upi_id: upi });
-    $('upimodal').close();
-    await loadSellerDashboard();
-  } catch (x) {
-    err.textContent = x.message;
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-// ----------------------------------------------------
-// CUSTOMER BUYER FLOW (RAZORPAY CHECKOUT + SIGNATURE VERIFICATION)
-// ----------------------------------------------------
-function loadScript(src) {
-  return new Promise(ok => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = ok;
-    document.head.appendChild(s);
-  });
+function load(src){return new Promise(ok=>{const s=document.createElement('script');s.src=src;s.onload=ok;document.head.appendChild(s)})}
+async function cust(sid){
+  show('cust');$('hdr').hidden=true;$('ftr').hidden=true;document.title='Print here';
+  const root=$('v-cust');let shop;
+  try{shop=await api('/api/shop/'+sid)}catch(e){root.innerHTML='<h1>Shop not found</h1><p class="sub">Check the QR code on the counter and scan again.</p>';return}
+  if(!shop.active){root.innerHTML='<h1>'+esc(shop.name)+'</h1><p class="sub">Printing is switched off at this shop right now. Please ask at the counter.</p>';return}
+  const locked=shop.mode==='locked';let st={b64:null,name:'',pages:0,o:locked?{...shop.defaults}:{color:'bw',copies:1,duplex:false,range:''}};
+  root.innerHTML='<h1>'+esc(shop.name)+'</h1><p class="sub">Upload your file, pay with UPI, and it prints here.</p>'
+   +'<label class="drop" id="drop"><input type="file" id="file" accept="application/pdf,image/*"><b id="dt">Choose a PDF or photo</b><br><small id="ds">Tap to upload</small></label><div class="err" id="ce"></div>'
+   +'<div class="cbox" id="cb" hidden>'+(locked?'<div class="lockedbox" id="lk"></div>':
+    '<label>Colour</label><div class="seg" id="sc"><button type="button" aria-pressed="true" data-v="bw">Black &amp; white</button><button type="button" aria-pressed="false" data-v="col">Colour</button></div>'
+   +'<label for="cp">Copies</label><input id="cp" type="number" min="1" max="99" value="1">'
+   +'<label>Sides</label><div class="seg" id="sd"><button type="button" aria-pressed="true" data-v="0">One side</button><button type="button" aria-pressed="false" data-v="1">Both sides</button></div>'
+   +'<label for="rg">Pages (leave blank for all)</label><input id="rg" placeholder="e.g. 1-3,5">')
+   +'<button class="btn" id="pay" type="button"></button></div><div id="stt"></div>';
+  const price=()=>{const tot=st.pages;let n=tot;if(st.o.range){const s=new Set();st.o.range.split(',').forEach(p=>{const m=p.trim().match(/^(\d+)(?:-(\d+))?$/);if(m){for(let i=+m[1];i<=Math.min(+(m[2]||m[1]),tot);i++)if(i>0)s.add(i)}});if(s.size)n=s.size}
+    return {n,amt:Math.round(n*st.o.copies*(st.o.color==='col'?shop.rates.color:shop.rates.bw)*100)/100}};
+  const upd=()=>{const p=price();$('pay').textContent='Pay \u20B9'+p.amt+' with UPI';
+    if(locked)$('lk').innerHTML='Set by the shop: <b>'+(st.o.color==='col'?'colour':'black &amp; white')+'</b>, '+st.o.copies+' '+(st.o.copies>1?'copies':'copy')+', '+(st.o.duplex?'both sides':'one side')+(st.o.range?', pages '+esc(st.o.range):', all pages')+'. '+p.n+' page'+(p.n>1?'s':'')+' in total.'}
+  if(!locked){
+    const seg=(id,fn)=>$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{$(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');fn(b.dataset.v);upd()});
+    seg('sc',v=>st.o.color=v);seg('sd',v=>st.o.duplex=v==='1');
+    $('cp').oninput=e=>{st.o.copies=Math.min(99,Math.max(1,parseInt(e.target.value)||1));upd()};$('rg').oninput=e=>{st.o.range=e.target.value.replace(/[^0-9,\-\s]/g,'');upd()}}
+  const b64=buf=>{let s='',u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
+  $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('ce').textContent='';$('ds').textContent='Reading file\u2026';
+    try{let buf;
+      if(f.type==='application/pdf'){await load('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        buf=await f.arrayBuffer();st.pages=(await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))}).promise).numPages}
+      else if(f.type.startsWith('image/')){await load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        const img=new Image();img.src=URL.createObjectURL(f);await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0);
+        const d=new jspdf.jsPDF({unit:'mm',format:'a4'}),W=210,H=297,r=Math.min((W-20)/c.width,(H-20)/c.height),w=c.width*r,h=c.height*r;d.addImage(c.toDataURL('image/jpeg',.92),'JPEG',(W-w)/2,(H-h)/2,w,h);buf=d.output('arraybuffer');st.pages=1}
+      else throw new Error('Only PDF files and photos can be printed. Save Word files as PDF first.');
+      st.b64=b64(buf);st.name=f.name.replace(/\.\w+$/,'')+'.pdf';$('dt').textContent=f.name;$('ds').textContent=st.pages+' page'+(st.pages>1?'s':'')+' \u2013 tap to change';$('cb').hidden=false;upd()}
+    catch(x){$('ce').textContent=x.message;$('ds').textContent='Tap to upload'}};
+  $('pay').onclick=async()=>{$('pay').disabled=true;$('ce').textContent='';
+    try{const j=await api('/api/shop/'+sid+'/jobs',{filename:st.name,data:st.b64,pages:st.pages,options:st.o});
+      const cfg=await api('/api/config');
+      if(cfg.keyId){ /* real payment through Razorpay: money goes to the shop's UPI */
+        $('cb').hidden=true;$('drop').hidden=true;
+        const rp=await api('/api/jobs/'+j.id+'/pay',{});await load('https://checkout.razorpay.com/v1/checkout.js');
+        $('stt').innerHTML='<div class="status" id="ps">Waiting for payment\u2026</div>';
+        await new Promise((ok,no)=>rzpPay(rp,async x=>{try{await api('/api/jobs/'+j.id+'/verify',x);ok()}catch(e){no(e)}},no,'Print '+j.id));
+        $('ps').textContent='Payment received. Sending to the printer\u2026';
+        const t=setInterval(async()=>{const s=await api('/api/jobs/'+j.id);
+          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML='<b>Done.</b> Collect your pages at the counter.'}
+          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML='<b>The printer had a problem.</b> Please tell the shopkeeper.'}
+          else if(s.status==='printing')$('ps').textContent='Printing now\u2026'},2000);
+        return;
+      }
+      const upi='upi://pay?pa='+encodeURIComponent(shop.upi)+'&pn='+encodeURIComponent(shop.name)+'&am='+j.amount+'&cu=INR&tn='+encodeURIComponent('Print '+j.id);
+      $('cb').hidden=true;$('drop').hidden=true;
+      $('stt').innerHTML='<div class="status"><p><b>Pay \u20B9'+j.amount+' to '+esc(shop.name)+'</b></p><p style="margin:.6rem 0 1rem">Your UPI app should open. If it did not, tap the button.</p><a class="btn" style="display:block;text-align:center;margin-bottom:.7rem" href="'+upi+'">Open UPI app</a><button class="btn ghost" id="paid" style="width:100%">I have paid</button></div>';
+      location.href=upi;
+      $('paid').onclick=async()=>{await api('/api/jobs/'+j.id+'/pay',{});const box=$('stt');box.innerHTML='<div class="status" id="ps">Payment received. Sending to the printer\u2026</div>';
+        const t=setInterval(async()=>{const s=await api('/api/jobs/'+j.id);
+          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML='<b>Done.</b> Collect your pages at the counter.'}
+          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML='<b>The printer had a problem.</b> Please tell the shopkeeper.'}
+          else if(s.status==='printing')$('ps').textContent='Printing now\u2026'},2000)}
+    }catch(x){$('ce').textContent=x.message;$('pay').disabled=false}};
 }
-
-async function cust(sid) {
-  show('cust');
-  $('hdr').hidden = true;
-  $('ftr').hidden = true;
-  document.title = 'Print here - PrintQR';
-
-  let shop;
-  try {
-    shop = await api('/api/shop/' + sid);
-  } catch (e) {
-    $('v-cust').innerHTML = '<div class="fail-card"><h1>Shop Not Found</h1><p class="sub">Please check the QR code on the counter and scan again.</p></div>';
-    return;
-  }
-
-  if (!shop.active) {
-    $('v-cust').innerHTML = '<div class="fail-card"><h1>' + esc(shop.name) + '</h1><p class="sub">Printing is switched off at this shop right now. Please ask the counter attendant.</p></div>';
-    return;
-  }
-
-  $('c-shopname').textContent = shop.name;
-  const locked = (shop.mode === 'locked');
-  let st = {
-    b64: null,
-    name: '',
-    pages: 0,
-    o: locked ? { ...shop.defaults } : { color: 'bw', copies: 1, duplex: false, range: '' }
+/* ---- admin ---- */
+async function admin(){
+  if(!tk()){location.hash='#/login';return}
+  show('admin');const root=$('v-admin');let d;
+  try{d=await api('/api/admin/data')}catch(e){root.innerHTML='<h1>Admins only</h1><p class="lead2">This account does not have admin access.</p>';return}
+  const fmt=t=>t?new Date(t).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}):'\u2013';
+  const inr=n=>'\u20B9'+Math.round(n).toLocaleString('en-IN'),S=d.stats;
+  const tabs=[['overview','Overview'],['keys','Keys'],['users','Users'],['shops','Shops'],['jobs','Print jobs'],['prices','Prices']];
+  let tab=sessionStorage.getItem('pq_at')||'overview';
+  const tbl=(h,rows)=>'<div class="tw"><table><thead><tr>'+h.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td colspan="'+h.length+'">Nothing here yet.</td></tr>')+'</tbody></table></div>';
+  const pill=s=>'<span class="pill '+(s==='active'||s==='printed'?'on':s==='expired'||s==='failed'?'off':'')+'">'+esc(s)+'</span>';
+  const body={
+    overview:()=>'<div class="figs">'+[[S.users,'shop accounts'],[S.activeKeys,'active keys of '+S.keys],[S.shops,'shops live or past'],[inr(S.sales),'plan sales'],[S.jobs,'jobs printed'],[inr(S.volume),'customer print payments']].map(f=>'<div><b>'+f[0]+'</b><span>'+f[1]+'</span></div>').join('')+'</div>',
+    keys:()=>'<form id="isf" class="inl"><div><label for="ie">User email</label><input id="ie" type="email"></div><div><label for="ip">Plan</label><select id="ip"><option value="demo">48-hour demo</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="12m">12 months</option></select></div><div><label for="id">Bonus days</label><input id="id" type="number" min="0" value="0"></div><button class="btn" type="submit">Issue free key</button></form><div class="err" id="ae"></div>'
+      +tbl(['Key','Owner','Plan','Paid','Status','Ends',''],d.keys.map(k=>'<tr><td><code>'+esc(k.key)+'</code></td><td>'+esc(k.email)+'</td><td>'+esc(k.planName)+'</td><td>'+(k.price?inr(k.price):'Free')+'</td><td>'+pill(k.status)+'</td><td>'+fmt(k.expiresAt)+'</td><td class="ac"><button class="lk" data-a="extend" data-k="'+esc(k.key)+'">+30 days</button><button class="lk" data-a="revoke" data-k="'+esc(k.key)+'">Revoke</button></td></tr>')),
+    users:()=>tbl(['Name','Email','Keys','Demo used'],d.users.map(u=>'<tr><td>'+esc(u.name)+(u.isAdmin?' (admin)':'')+'</td><td>'+esc(u.email)+'</td><td>'+u.keys+'</td><td>'+(u.demoUsed?'Yes':'No')+'</td></tr>')),
+    shops:()=>tbl(['Shop','Owner','Mode','UPI','Status','Printed jobs'],d.shops.map(s=>'<tr><td>'+esc(s.name)+'<br><small>'+s.id+'</small></td><td>'+esc(s.owner)+'</td><td>'+(s.mode==='locked'?'Shopper locked':'Default')+'</td><td>'+esc(s.upi||'\u2013')+'</td><td>'+pill(s.active?'active':'expired')+'</td><td>'+s.jobs+'</td></tr>')),
+    jobs:()=>tbl(['When','Shop','File','Pages','Amount','Status'],d.jobs.map(j=>'<tr><td>'+fmt(j.createdAt)+'</td><td>'+esc(j.shop||'')+'</td><td>'+esc(j.filename)+'</td><td>'+j.pages+'</td><td>'+inr(j.amount)+'</td><td>'+pill(j.status)+'</td></tr>')),
+    prices:()=>'<form id="prf" class="inl"><div><label for="p3">3 months (\u20B9)</label><input id="p3" type="number" min="0" value="'+d.prices['3m']+'"></div><div><label for="p6">6 months (\u20B9)</label><input id="p6" type="number" min="0" value="'+d.prices['6m']+'"></div><div><label for="p12">12 months (\u20B9)</label><input id="p12" type="number" min="0" value="'+d.prices['12m']+'"></div><button class="btn" type="submit">Save prices</button></form><div class="err" id="ae"></div><p style="color:var(--ink2)">New prices show on the dashboard right away. Keys already bought keep what was paid.</p>'
   };
-
-  const price = () => {
-    const tot = st.pages;
-    let n = tot;
-    if (st.o.range) {
-      const s = new Set();
-      st.o.range.split(',').forEach(p => {
-        const m = p.trim().match(/^(\d+)(?:-(\d+))?$/);
-        if (m) {
-          for (let i = +m[1]; i <= Math.min(+(m[2] || m[1]), tot); i++) if (i > 0) s.add(i);
-        }
-      });
-      if (s.size) n = s.size;
-    }
-    const rate = st.o.color === 'col' ? shop.rates.color : shop.rates.bw;
-    return { n, amt: Math.round(n * st.o.copies * rate * 100) / 100 };
-  };
-
-  const upd = () => {
-    const p = price();
-    $('pay').textContent = 'Pay ₹' + p.amt + ' with Razorpay (UPI / Card)';
-    if (locked) {
-      $('locked-options').hidden = false;
-      $('interactive-options').hidden = true;
-      $('locked-options').innerHTML = 'Counter defaults: <b>' + (st.o.color === 'col' ? 'Colour' : 'Black & white') + '</b>, '
-        + st.o.copies + ' ' + (st.o.copies > 1 ? 'copies' : 'copy') + ', ' + (st.o.duplex ? 'both sides' : 'one side')
-        + (st.o.range ? ', pages ' + esc(st.o.range) : ', all pages') + '. Total: <b>' + p.n + ' pages</b>.';
-    }
-  };
-
-  if (!locked) {
-    const seg = (id, fn) => $(id).querySelectorAll('button').forEach(b => b.onclick = () => {
-      $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false'));
-      b.setAttribute('aria-pressed', 'true');
-      fn(b.dataset.v);
-      upd();
-    });
-    seg('sc', v => st.o.color = v);
-    seg('sd', v => st.o.duplex = (v === '1'));
-    $('cp').oninput = e => { st.o.copies = Math.min(99, Math.max(1, parseInt(e.target.value) || 1)); upd(); };
-    $('rg').oninput = e => { st.o.range = e.target.value.replace(/[^0-9,\-\s]/g, ''); upd(); };
+  function draw(){
+    root.innerHTML='<div class="dhead"><h1>Admin</h1></div><div class="atabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(t[0]===tab)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="ab">'+body[tab]()+'</div>';
+    root.querySelectorAll('.atabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sessionStorage.setItem('pq_at',tab);draw()});
+    root.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+      if(b.dataset.a==='revoke'&&!confirm('Revoke this key now? The shop stops printing immediately.'))return;
+      try{await api('/api/admin/key',{key:b.dataset.k,action:b.dataset.a,days:30});admin()}catch(e){alert(e.message)}});
+    const isf=$('isf');if(isf)isf.onsubmit=async e=>{e.preventDefault();try{await api('/api/admin/issue',{email:$('ie').value,plan:$('ip').value,days:$('id').value});admin()}catch(x){$('ae').textContent=x.message}};
+    const prf=$('prf');if(prf)prf.onsubmit=async e=>{e.preventDefault();try{await api('/api/admin/prices',{prices:{'3m':$('p3').value,'6m':$('p6').value,'12m':$('p12').value}});$('ae').style.color='#1F7A47';$('ae').textContent='Saved.'}catch(x){$('ae').textContent=x.message}};
   }
-
-  const b64 = buf => {
-    let s = '', u = new Uint8Array(buf);
-    for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
-    return btoa(s);
-  };
-
-  $('file').onchange = async e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    $('ce').textContent = '';
-    $('ds').textContent = 'Reading document…';
-
-    try {
-      let buf;
-      if (f.type === 'application/pdf') {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        buf = await f.arrayBuffer();
-        st.pages = (await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise).numPages;
-      } else if (f.type.startsWith('image/')) {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-        const img = new Image();
-        img.src = URL.createObjectURL(f);
-        await img.decode();
-        const c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        const x = c.getContext('2d');
-        x.fillStyle = '#fff';
-        x.fillRect(0, 0, c.width, c.height);
-        x.drawImage(img, 0, 0);
-        const d = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
-        const W = 210, H = 297, r = Math.min((W - 20) / c.width, (H - 20) / c.height), w = c.width * r, h = c.height * r;
-        d.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', (W - w) / 2, (H - h) / 2, w, h);
-        buf = d.output('arraybuffer');
-        st.pages = 1;
-      } else {
-        throw new Error('Please select a PDF document or image file.');
-      }
-
-      st.b64 = b64(buf);
-      st.name = f.name.replace(/\.\w+$/, '') + '.pdf';
-      $('dt').textContent = f.name;
-      $('ds').textContent = st.pages + ' page' + (st.pages > 1 ? 's' : '') + ' – tap to change';
-      $('cb').hidden = false;
-      upd();
-    } catch (x) {
-      $('ce').textContent = x.message;
-      $('ds').textContent = 'Tap to upload';
-    }
-  };
-
-  // Pay button action: Razorpay Order Creation + Checkout + Signature Verification
-  let createdJobId = null;
-
-  $('pay').onclick = async () => {
-    // Prevent duplicate clicks
-    $('pay').disabled = true;
-    $('pay').textContent = 'Creating Payment Order…';
-    $('ce').textContent = '';
-
-    try {
-      // 1. Create or retrieve job on server
-      if (!createdJobId) {
-        const j = await api('/api/shop/' + sid + '/jobs', {
-          filename: st.name,
-          data: st.b64,
-          pages: st.pages,
-          options: st.o
-        });
-        createdJobId = j.id;
-      }
-
-      // 2. Server creates Razorpay order (pricing strictly from database)
-      const order = await api('/api/payment/create-order', {
-        type: 'job',
-        jobId: createdJobId
-      });
-
-      // 3. Open Razorpay Checkout modal
-      const options = {
-        key: order.keyId,
-        amount: order.amountPaise,
-        currency: 'INR',
-        name: shop.name,
-        description: 'Print: ' + st.name,
-        order_id: order.orderId,
-        prefill: { method: 'upi' },
-        theme: { color: '#D4175A' },
-        handler: async function (response) {
-          // 4. Client receives response and submits to server for signature verification
-          showProcessingScreen();
-          try {
-            const verifyRes = await api('/api/payment/verify', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              type: 'job',
-              itemId: createdJobId
-            });
-
-            // 5. Success screen + live print polling
-            showSuccessScreen({
-              paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              amount: order.amount,
-              jobId: createdJobId,
-              filename: st.name
-            });
-          } catch (verErr) {
-            showFailureScreen('Signature verification failed: ' + verErr.message);
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            $('pay').disabled = false;
-            upd();
-          }
-        }
-      };
-
-      // Handle simulated test mode fallback if keys are not yet configured
-      if (order.simulated) {
-        showSimulatedPaymentModal(order, createdJobId);
-      } else {
-        const rzp = new Razorpay(options);
-        rzp.on('payment.failed', function (resp) {
-          showFailureScreen(resp.error?.description || 'Payment was declined by bank.');
-        });
-        rzp.open();
-      }
-    } catch (err) {
-      $('ce').textContent = err.message;
-      $('pay').disabled = false;
-      upd();
-    }
-  };
-
-  function showProcessingScreen() {
-    $('cb').hidden = true;
-    $('drop').hidden = true;
-    $('stt').innerHTML = '<div class="status" style="text-align:center;padding:2.5rem 1rem">'
-      + '<h3 style="margin-bottom:.5rem">Verifying payment with bank…</h3>'
-      + '<p style="color:var(--ink2)">Please do not close this window.</p>'
-      + '</div>';
-  }
-
-  function showSuccessScreen({ paymentId, orderId, amount, jobId, filename }) {
-    $('cb').hidden = true;
-    $('drop').hidden = true;
-
-    $('stt').innerHTML = '<div class="succ-card">'
-      + '<div class="succ-badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>'
-      + '<h2>Payment Successful!</h2>'
-      + '<p style="color:var(--ink2);margin-top:.3rem">Your print job has been sent to the printer.</p>'
-      + '<table class="receipt-table">'
-      + '<tr><td>Amount Paid</td><td>' + inr(amount) + '</td></tr>'
-      + '<tr><td>Document</td><td>' + esc(filename) + '</td></tr>'
-      + '<tr><td>Payment ID</td><td><code>' + esc(paymentId) + '</code></td></tr>'
-      + '<tr><td>Order ID</td><td><code>' + esc(orderId) + '</code></td></tr>'
-      + '</table>'
-      + '<div id="print-progress" class="status" style="text-align:center;margin-top:1.2rem;background:var(--bg)">'
-      + '<b>Sending to printer…</b>'
-      + '</div>'
-      + '</div>';
-
-    // Poll printer status
-    const pollInterval = setInterval(async () => {
-      try {
-        const s = await api('/api/jobs/' + jobId);
-        const pbox = $('print-progress');
-        if (!pbox) { clearInterval(pollInterval); return; }
-        if (s.status === 'printed') {
-          clearInterval(pollInterval);
-          pbox.style.borderColor = 'var(--green)';
-          pbox.innerHTML = '<b style="color:var(--green)">✓ Printing Complete!</b><br><span style="color:var(--ink2);font-size:.9rem">Collect your pages from the counter tray.</span>';
-        } else if (s.status === 'printing') {
-          pbox.innerHTML = '<b>Printer is printing your document right now…</b>';
-        } else if (s.status === 'failed') {
-          clearInterval(pollInterval);
-          pbox.style.borderColor = 'var(--mag)';
-          pbox.innerHTML = '<b style="color:var(--mag)">Printer problem reported</b><br><span style="font-size:.9rem">Please notify the shopkeeper.</span>';
-        }
-      } catch (e) {}
-    }, 2000);
-  }
-
-  function showFailureScreen(reason) {
-    $('cb').hidden = true;
-    $('stt').innerHTML = '<div class="fail-card">'
-      + '<div class="fail-badge"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'
-      + '<h2>Payment Incomplete</h2>'
-      + '<p style="color:var(--ink2);margin-top:.4rem">' + esc(reason || 'The transaction could not be processed.') + '</p>'
-      + '<div style="margin-top:1.5rem;display:flex;gap:1rem;justify-content:center">'
-      + '<button class="btn mag" id="retry-btn">Try Payment Again</button>'
-      + '<button class="btn ghost" id="change-btn">Change Options</button>'
-      + '</div>'
-      + '</div>';
-
-    $('retry-btn').onclick = () => {
-      $('stt').innerHTML = '';
-      $('cb').hidden = false;
-      $('pay').disabled = false;
-      $('pay').click();
-    };
-    $('change-btn').onclick = () => {
-      $('stt').innerHTML = '';
-      $('cb').hidden = false;
-      $('drop').hidden = false;
-      $('pay').disabled = false;
-      upd();
-    };
-  }
-
-  function showSimulatedPaymentModal(order, jobId) {
-    $('stt').innerHTML = '<div class="status" style="border-color:var(--mag);margin-top:1.4rem">'
-      + '<h3>Razorpay Test Sandbox Simulation</h3>'
-      + '<p style="color:var(--ink2);font-size:.9rem;margin:.4rem 0 1rem">Test mode simulated order created (' + esc(order.orderId) + '). Click below to simulate an approved test UPI payment.</p>'
-      + '<button class="btn mag" id="sim-pay" style="width:100%">Simulate Successful Test Payment</button>'
-      + '<button class="btn ghost" id="sim-cancel" style="width:100%;margin-top:.6rem">Cancel</button>'
-      + '</div>';
-
-    $('sim-cancel').onclick = () => {
-      $('stt').innerHTML = '';
-      $('pay').disabled = false;
-      upd();
-    };
-
-    $('sim-pay').onclick = async () => {
-      $('sim-pay').disabled = true;
-      try {
-        const dummyPayId = 'pay_sim_' + Math.random().toString(36).slice(2, 10);
-        await api('/api/payment/verify', {
-          razorpay_order_id: order.orderId,
-          razorpay_payment_id: dummyPayId,
-          razorpay_signature: 'sim_signature',
-          type: 'job',
-          itemId: jobId
-        });
-        showSuccessScreen({
-          paymentId: dummyPayId,
-          orderId: order.orderId,
-          amount: order.amount,
-          jobId,
-          filename: st.name
-        });
-      } catch (e) {
-        showFailureScreen(e.message);
-      }
-    };
-  }
-}
-
-// ----------------------------------------------------
-// ADMIN DASHBOARD
-// ----------------------------------------------------
-async function admin() {
-  if (!tk()) { location.hash = '#/login'; return; }
-  show('admin');
-  const root = $('v-admin');
-  let d;
-  try {
-    d = await api('/api/admin/data');
-  } catch (e) {
-    root.innerHTML = '<h1>Admins only</h1><p class="lead2">This account does not have admin permissions.</p>';
-    return;
-  }
-
-  const S = d.stats;
-  const tabs = [
-    ['overview', 'Overview'],
-    ['orders', 'Marketplace Orders'],
-    ['keys', 'Keys'],
-    ['users', 'Users'],
-    ['shops', 'Shops'],
-    ['jobs', 'Print jobs'],
-    ['prices', 'Prices']
-  ];
-  let tab = sessionStorage.getItem('pq_at') || 'overview';
-
-  const tbl = (h, rows) => '<div class="tw"><table><thead><tr>' + h.map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="' + h.length + '" style="padding:1.5rem;text-align:center;color:var(--mute)">Nothing here yet.</td></tr>') + '</tbody></table></div>';
-  const pill = s => '<span class="pill ' + (s === 'active' || s === 'printed' || s === 'paid' || s === 'completed' ? 'on' : s === 'expired' || s === 'failed' ? 'off' : '') + '">' + esc(s) + '</span>';
-
-  const body = {
-    overview: () => '<div class="figs">' + [
-      [S.users, 'Shop Accounts'],
-      [S.activeKeys, 'Active Counter Keys'],
-      [inr(S.sales), 'Software License Revenue'],
-      [inr(S.marketplaceVolume || 0), 'Counter Payments Processed'],
-      [inr(S.platformFeeTotal || 0), 'Platform Fees Collected'],
-      [S.jobs, 'Total Documents Printed']
-    ].map(f => '<div><b>' + f[0] + '</b><span>' + f[1] + '</span></div>').join('') + '</div>',
-
-    orders: () => tbl(['Date', 'Order ID', 'Payment ID', 'Gross Amount', 'Seller Share', 'Platform Fee', 'Order Status', 'UPI Payout', 'Action'],
-      (d.orders || []).map(o =>
-        '<tr>'
-        + '<td>' + fmt(o.created_at) + '</td>'
-        + '<td><code>' + esc(o.razorpay_order_id || o.id) + '</code></td>'
-        + '<td><code>' + esc(o.razorpay_payment_id || '—') + '</code></td>'
-        + '<td><b>' + inr(o.amount) + '</b></td>'
-        + '<td>' + inr(o.seller_share_amount || 0) + '</td>'
-        + '<td style="color:var(--green)">' + inr(o.platform_fee_amount || 0) + '</td>'
-        + '<td>' + pill(o.status) + '</td>'
-        + '<td>' + pill(o.payout_status || 'none') + '</td>'
-        + '<td class="ac">' + (o.status === 'paid' ? '<button class="lk" data-refund="' + esc(o.id) + '">Refund &amp; Reverse</button>' : '—') + '</td>'
-        + '</tr>'
-      )),
-
-    keys: () => '<form id="isf" class="inl">'
-      + '<div><label for="ie">User email</label><input id="ie" type="email"></div>'
-      + '<div><label for="ip">Plan</label><select id="ip"><option value="demo">48-hour demo</option><option value="3m">3 months</option><option value="6m">6 months</option><option value="12m">12 months</option></select></div>'
-      + '<div><label for="id">Bonus days</label><input id="id" type="number" min="0" value="0"></div>'
-      + '<button class="btn mag" type="submit">Issue Free Key</button></form><div class="err" id="ae"></div>'
-      + tbl(['Key', 'Owner', 'Plan', 'Paid', 'Status', 'Ends', ''], d.keys.map(k =>
-        '<tr><td><code>' + esc(k.key) + '</code></td><td>' + esc(k.email) + '</td><td>' + esc(k.planName) + '</td><td>' + (k.price ? inr(k.price) : 'Free') + '</td><td>' + pill(k.status) + '</td><td>' + fmt(k.expiresAt) + '</td><td class="ac"><button class="lk" data-a="extend" data-k="' + esc(k.key) + '">+30 days</button><button class="lk" data-a="revoke" data-k="' + esc(k.key) + '">Revoke</button></td></tr>'
-      )),
-
-    users: () => tbl(['Name', 'Email', 'Keys', 'Demo used'], d.users.map(u =>
-      '<tr><td>' + esc(u.name) + (u.isAdmin ? ' (admin)' : '') + '</td><td>' + esc(u.email) + '</td><td>' + u.keys + '</td><td>' + (u.demoUsed ? 'Yes' : 'No') + '</td></tr>'
-    )),
-
-    shops: () => tbl(['Shop', 'Owner', 'Mode', 'UPI VPA', 'Route Status', 'Printed Jobs'], d.shops.map(s =>
-      '<tr><td>' + esc(s.name) + '<br><small>' + s.id + '</small></td><td>' + esc(s.owner) + '</td><td>' + (s.mode === 'locked' ? 'Locked' : 'Default') + '</td><td>' + esc(s.upi || '—') + '</td><td>' + pill(s.sellerStatus || 'unlinked') + '</td><td>' + s.jobs + '</td></tr>'
-    )),
-
-    jobs: () => tbl(['Date', 'Shop', 'File', 'Pages', 'Amount', 'Status'], d.jobs.map(j =>
-      '<tr><td>' + fmt(j.createdAt) + '</td><td>' + esc(j.shop || '') + '</td><td>' + esc(j.filename) + '</td><td>' + j.pages + '</td><td>' + inr(j.amount) + '</td><td>' + pill(j.status) + '</td></tr>'
-    )),
-
-    prices: () => '<form id="prf" class="inl">'
-      + '<div><label for="p3">3 months (₹)</label><input id="p3" type="number" min="0" value="' + d.prices['3m'] + '"></div>'
-      + '<div><label for="p6">6 months (₹)</label><input id="p6" type="number" min="0" value="' + d.prices['6m'] + '"></div>'
-      + '<div><label for="p12">12 months (₹)</label><input id="p12" type="number" min="0" value="' + d.prices['12m'] + '"></div>'
-      + '<button class="btn mag" type="submit">Save Prices</button></form><div class="err" id="ae"></div>'
-  };
-
-  function draw() {
-    root.innerHTML = '<div class="dhead"><h1>Platform Admin</h1></div>'
-      + '<div class="atabs" role="tablist">' + tabs.map(t => '<button role="tab" aria-selected="' + (t[0] === tab) + '" data-t="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>'
-      + '<div id="ab">' + body[tab]() + '</div>';
-
-    root.querySelectorAll('.atabs button').forEach(b => b.onclick = () => {
-      tab = b.dataset.t;
-      sessionStorage.setItem('pq_at', tab);
-      draw();
-    });
-
-    root.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
-      if (b.dataset.a === 'revoke' && !confirm('Revoke this key now? The shop stops printing immediately.')) return;
-      try {
-        await api('/api/admin/key', { key: b.dataset.k, action: b.dataset.a, days: 30 });
-        admin();
-      } catch (e) { alert(e.message); }
-    });
-
-    root.querySelectorAll('[data-refund]').forEach(b => b.onclick = async () => {
-      if (!confirm('Refund this order? The Route transfer to the seller will be reversed.')) return;
-      try {
-        await api('/api/payment/refund', { orderId: b.dataset.refund });
-        admin();
-      } catch (e) { alert(e.message); }
-    });
-
-    const isf = $('isf');
-    if (isf) isf.onsubmit = async e => {
-      e.preventDefault();
-      try {
-        await api('/api/admin/issue', { email: $('ie').value, plan: $('ip').value, days: $('id').value });
-        admin();
-      } catch (x) { $('ae').textContent = x.message; }
-    };
-
-    const prf = $('prf');
-    if (prf) prf.onsubmit = async e => {
-      e.preventDefault();
-      try {
-        await api('/api/admin/prices', { prices: { '3m': $('p3').value, '6m': $('p6').value, '12m': $('p12').value } });
-        $('ae').style.color = 'var(--green)';
-        $('ae').textContent = 'Prices saved successfully.';
-      } catch (x) { $('ae').textContent = x.message; }
-    };
-  }
-
   draw();
 }
-
-// ----------------------------------------------------
-// ROUTER
-// ----------------------------------------------------
-function route() {
-  nav();
-  const sid = new URLSearchParams(location.search).get('shopId');
-  if (sid) return cust(sid);
-
-  const h = location.hash;
-  if (h === '#/login') auth('login');
-  else if (h === '#/signup') auth('signup');
-  else if (h === '#/dashboard') dash();
-  else if (h === '#/admin') admin();
-  else show('home');
-}
-
-window.addEventListener('hashchange', () => {
-  route();
-  if (location.hash.startsWith('#/')) scrollTo(0, 0);
-});
-route();
+/* ---- router ---- */
+function route(){nav();const sid=new URLSearchParams(location.search).get('shopId');if(sid)return cust(sid);
+  const h=location.hash;
+  if(h==='#/login')auth('login');else if(h==='#/signup')auth('signup');else if(h==='#/dashboard')dash();else if(h==='#/admin')admin();else show('home')}
+window.addEventListener('hashchange',()=>{route();if(location.hash.startsWith('#/'))scrollTo(0,0)});route();
+})();
 </script>
 </body>
 </html>
