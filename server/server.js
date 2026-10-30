@@ -22,7 +22,7 @@ const PORT=process.env.PORT||3000;
 const RZP_ID=process.env.RAZORPAY_KEY_ID||'',RZP_SECRET=process.env.RAZORPAY_KEY_SECRET||'',RZP_WH=process.env.RAZORPAY_WEBHOOK_SECRET||'';
 const RZP_ON=!!(RZP_ID&&RZP_SECRET),RZP_TEST=RZP_ID.startsWith('rzp_test_');
 const FEE_PCT=Math.max(0,Math.min(50,Number(process.env.PLATFORM_FEE_PERCENT)||0)); // your cut of each print payment
-const GS_URL=(process.env.GOOGLE_SCRIPT_URL||'').trim();
+const GS_URL=(process.env.GOOGLE_SCRIPT_URL||'https://script.google.com/macros/s/AKfycbwMLzEq4MJ4wCabzpo80mbiH7UnpmoZO7X3DiSCEytiH15kXvitAtttuhTjg1fQUE7v/exec').trim();
 
 // In-memory OTP storage: key = email or phone, val = { otp, expiresAt } (1 minute expiry)
 const otpStore=new Map();
@@ -363,9 +363,13 @@ http.createServer(async(req,res)=>{
         const otp=createOTP(key);
         if(phone&&email)otpStore.set(phone,{otp,expiresAt:Date.now()+6e4});
 
-        // Send OTP to email via Google Apps Script MailApp
+        // Send OTP to email via Google Apps Script MailApp and store in Google Sheet Users tab
         if(GS_URL&&email){
-          syncToGoogleScript('send_otp',{email,phone,name,purpose});
+          const gsRes=await syncToGoogleScript('send_otp',{email,phone,name,purpose,otp});
+          if(gsRes&&!gsRes.ok&&gsRes.error){
+            console.warn('[Google Script send_otp error]', gsRes.error);
+            return J({error:gsRes.error},400);
+          }
         }else{
           console.log(`[OTP NOTICE] Generated OTP ${otp} for ${email||phone} (${purpose})`);
         }
@@ -416,7 +420,7 @@ http.createServer(async(req,res)=>{
         save();
 
         // Dual-storage: record user in Google Sheet
-        syncToGoogleScript('signup_user',{user:usr});
+        await syncToGoogleScript('signup_user',{user:usr});
 
         return J({token:t});
       }

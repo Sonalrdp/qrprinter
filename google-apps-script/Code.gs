@@ -44,11 +44,14 @@ function getOrCreateSheet(ss, name, headers) {
 
 function initAllSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  getOrCreateSheet(ss, 'Users', [
+  const uSheet = getOrCreateSheet(ss, 'Users', [
     'Timestamp', 'User ID', 'Name', 'Email', 'Phone', 'Password Hash', 'Salt',
     'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET',
-    'Demo Used', 'Status'
+    'Demo Used', 'Status', 'OTP'
   ]);
+  if (uSheet.getLastColumn() < 13) {
+    uSheet.getRange(1, 13).setValue('OTP').setFontWeight('bold').setBackground('#EFEFEF');
+  }
   getOrCreateSheet(ss, 'Keys', [
     'Timestamp', 'Key', 'User Email', 'User ID', 'Plan', 'Price (INR)',
     'Status', 'Activated At', 'Expires At'
@@ -114,13 +117,43 @@ function doPost(e) {
         const purpose = data.purpose || 'Verification'; // 'Signup' or 'Forgot Password'
         if (!email) throw new Error('Email is required to send OTP.');
 
-        // Generate 6-digit cryptographic-style OTP
-        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        // Use passed OTP from server if present, otherwise generate 6-digit OTP
+        const otp = String(data.otp || Math.floor(100000 + Math.random() * 900000));
         
         // Cache OTP with 1 minute (60 seconds) expiry in Apps Script Cache
         const cache = CacheService.getScriptCache();
         cache.put('otp_' + email, otp, 60); // 1 minute
         if (phone) cache.put('otp_' + phone, otp, 60); // 1 minute
+
+        // Store user and OTP in Users sheet immediately
+        const usersSheet = getOrCreateSheet(ss, 'Users');
+        clearExpiredOtps(usersSheet); // clean up any old expired OTPs
+
+        const existingRow = findUserRow(usersSheet, email, phone);
+        if (existingRow > 0) {
+          usersSheet.getRange(existingRow, 1).setValue(getISTTimestamp());
+          if (name && name !== 'Valued User') usersSheet.getRange(existingRow, 3).setValue(name);
+          if (phone) usersSheet.getRange(existingRow, 5).setValue(phone);
+          usersSheet.getRange(existingRow, 12).setValue('Pending OTP');
+          usersSheet.getRange(existingRow, 13).setValue(otp); // Store OTP in sheet
+        } else {
+          const newUserId = 'usr_' + Utilities.getUuid().slice(0, 8);
+          usersSheet.appendRow([
+            getISTTimestamp(),
+            newUserId,
+            name,
+            email,
+            phone,
+            '', // password hash
+            '', // salt
+            '', // rzpKeyId
+            '', // rzpKeySecret
+            '', // rzpWebhookSecret
+            'No',
+            'Pending OTP',
+            otp // Store OTP in sheet
+          ]);
+        }
 
         // Send Email with formatted HTML template
         const subject = `PrintQR - Your OTP for ${purpose}: ${otp}`;
@@ -137,14 +170,23 @@ function doPost(e) {
           </div>
         `;
         
-        MailApp.sendEmail({
-          to: email,
-          subject: subject,
-          htmlBody: htmlBody
-        });
+        try {
+          MailApp.sendEmail({
+            to: email,
+            subject: subject,
+            htmlBody: htmlBody
+          });
+        } catch (mailErr) {
+          try {
+            GmailApp.sendEmail(email, subject, `Your OTP for ${purpose} is: ${otp}`, { htmlBody: htmlBody });
+          } catch (gmailErr) {
+            console.error('MailApp and GmailApp failed:', mailErr, gmailErr);
+            throw new Error('Email sending failed: ' + mailErr.message);
+          }
+        }
 
-        // Audit log
-        logAction(ss, 'OTP sent on mail', email, `Purpose: ${purpose}, Phone: ${phone || 'N/A'}`);
+        // Audit log in Sheet 3 (Logs)
+        logAction(ss, 'OTP sent on mail', email, `Purpose: ${purpose}, OTP: ${otp}, Phone: ${phone || 'N/A'}`);
         response = { ok: 1, message: 'OTP sent to your email successfully.' };
         break;
       }
@@ -156,13 +198,24 @@ function doPost(e) {
         const cache = CacheService.getScriptCache();
         const storedOtp = cache.get('otp_' + identifier);
 
-        if (!storedOtp || storedOtp !== enteredOtp) {
+        const usersSheet = getOrCreateSheet(ss, 'Users');
+        const row = findUserRow(usersSheet, data.email, data.phone);
+        let sheetOtp = '';
+        if (row > 0) {
+          sheetOtp = String(usersSheet.getRange(row, 13).getValue() || '').trim();
+        }
+
+        const valid = (storedOtp && storedOtp === enteredOtp) || (sheetOtp && sheetOtp === enteredOtp);
+        if (!valid) {
           throw new Error('Invalid or expired OTP. Please try again.');
         }
 
         // Clean up OTP immediately after successful verification
         cache.remove('otp_' + identifier);
-        logAction(ss, 'OTP verified', identifier, 'OTP matched and cleared');
+        if (row > 0) {
+          usersSheet.getRange(row, 13).setValue(''); // Remove OTP from user sheet!
+        }
+        logAction(ss, 'OTP verified', identifier, 'OTP matched and cleared from sheet');
         response = { ok: 1, verified: true };
         break;
       }
@@ -177,24 +230,37 @@ function doPost(e) {
         // Check if user already exists
         const existingRow = findUserRow(usersSheet, email, phone);
         if (existingRow > 0) {
-          throw new Error('User with this email or phone already exists in Google Sheet.');
+          // Update user to Active and save credentials
+          usersSheet.getRange(existingRow, 1).setValue(getISTTimestamp());
+          if (u.id) usersSheet.getRange(existingRow, 2).setValue(u.id);
+          if (u.name) usersSheet.getRange(existingRow, 3).setValue(u.name);
+          if (email) usersSheet.getRange(existingRow, 4).setValue(email);
+          if (phone) usersSheet.getRange(existingRow, 5).setValue(phone);
+          if (u.hash) usersSheet.getRange(existingRow, 6).setValue(u.hash);
+          if (u.salt) usersSheet.getRange(existingRow, 7).setValue(u.salt);
+          if (u.rzpKeyId) usersSheet.getRange(existingRow, 8).setValue(u.rzpKeyId);
+          if (u.rzpKeySecret) usersSheet.getRange(existingRow, 9).setValue(u.rzpKeySecret);
+          if (u.rzpWebhookSecret) usersSheet.getRange(existingRow, 10).setValue(u.rzpWebhookSecret);
+          usersSheet.getRange(existingRow, 12).setValue('Active');
+          usersSheet.getRange(existingRow, 13).setValue(''); // Remove OTP from sheet
+        } else {
+          // Add new active user row
+          usersSheet.appendRow([
+            getISTTimestamp(),
+            u.id || '',
+            u.name || '',
+            email,
+            phone,
+            u.hash || '',
+            u.salt || '',
+            u.rzpKeyId || '',
+            u.rzpKeySecret || '',
+            u.rzpWebhookSecret || '',
+            u.demoUsed ? 'Yes' : 'No',
+            'Active',
+            ''
+          ]);
         }
-
-        // Add new user row
-        usersSheet.appendRow([
-          getISTTimestamp(),
-          u.id || '',
-          u.name || '',
-          email,
-          phone,
-          u.hash || '',
-          u.salt || '',
-          u.rzpKeyId || '',
-          u.rzpKeySecret || '',
-          u.rzpWebhookSecret || '',
-          u.demoUsed ? 'Yes' : 'No',
-          'Active'
-        ]);
 
         logAction(ss, 'User added', email, `Name: ${u.name}, Phone: ${phone}, ID: ${u.id}`);
         response = { ok: 1, message: 'User stored in Google Sheet' };
@@ -308,6 +374,29 @@ function doPost(e) {
 
   return ContentService.createTextOutput(JSON.stringify(response))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Automatically clear OTP from Users sheet if expired (> 60 seconds)
+function clearExpiredOtps(sheet) {
+  try {
+    const data = sheet.getDataRange().getValues();
+    const now = new Date().getTime();
+    for (let i = 1; i < data.length; i++) {
+      const otpVal = data[i][12]; // Col 13: OTP
+      if (otpVal) {
+        const tsStr = String(data[i][0] || ''); // Timestamp: dd/mm/yyyy-hh:mm:ss
+        const m = tsStr.match(/^(\d{2})\/(\d{2})\/(\d{4})-(\d{2}):(\d{2}):(\d{2})$/);
+        if (m) {
+          const rowTime = new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:${m[6]}+05:30`).getTime();
+          if (now - rowTime > 60000) {
+            sheet.getRange(i + 1, 13).setValue(''); // Remove expired OTP from sheet
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error clearing expired OTPs:', e);
+  }
 }
 
 // Search for user row in Users sheet
