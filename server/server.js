@@ -56,8 +56,17 @@ const pub=s=>({id:s.id,name:s.name,mode:s.mode,defaults:s.defaults,rates:s.rates
 const full=s=>({...pub(s),slots:s.slots,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!s.linkedAccountId});
 function newKey(userId,plan,price,extra){const k={key:'PQR-'+[0,1,2].map(()=>rid(2).toUpperCase()).join('-'),userId,plan,price,createdAt:Date.now(),...extra};db.keys.push(k);return k}
 async function createOrder(o,receipt,transfers){
-  const r=await rzp('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind},...(transfers?{transfers}:{})});
-  o.id=r.id;db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
+  try{
+    const r=await rzp('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind},...(transfers?{transfers}:{})});
+    o.id=r.id;db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
+  }catch(e){
+    if(transfers&&(e.message||'').toLowerCase().includes('route')){
+      console.warn('[Razorpay Route Warning] Retrying without transfers:', e.message);
+      const r=await rzp('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind}});
+      o.id=r.id;db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
+    }
+    throw e;
+  }
 }
 // Safe to call twice (browser verify + webhook): the second call does nothing.
 function settleOrder(o,paymentId){
@@ -149,7 +158,13 @@ http.createServer(async(req,res)=>{
             const a=await rzp('POST','/v2/accounts',{type:'route',tnc_accepted:true,reference_id:ref,legal_business_name:nm,business_type:'individual',email:own.email,phone:'+91'+ph,
               settlement_accounts:[{method:'upi',upi:{vpa:ashop.upi,beneficiary_name:nm,currency:'INR',is_default:true}}]},ref);
             ashop.linkedAccountId=a.id;ashop.rzpFor=sig;
-          }catch(e){save();return J({error:'UPI payout setup failed: '+e.message},400)}
+          }catch(e){
+            console.warn('[Razorpay Route Warning]', e.message);
+            // If Route is not yet enabled by Razorpay support, save settings and allow direct collection
+            ashop.rzpFor=sig;
+            save();
+            return J(full(ashop));
+          }
         }
         save();return J(full(ashop));
       }
@@ -186,8 +201,7 @@ http.createServer(async(req,res)=>{
           // Real payment: create a Razorpay order whose money is split to the shop's linked UPI account.
           if(j.status!=='created')return J({status:j.status});
           const s=db.shops.find(x=>x.id===j.shopId),paise=Math.round(j.amount*100);let transfers;
-          if(!RZP_TEST){
-            if(!s||!s.linkedAccountId)return J({error:'This shop has not finished payout setup yet.'},400);
+          if(!RZP_TEST && s && s.linkedAccountId){
             transfers=[{account:s.linkedAccountId,amount:paise-Math.round(paise*FEE_PCT/100),currency:'INR',notes:{job:j.id}}];
           }
           const o={kind:'job',jobId:j.id,amount:paise,status:'created',createdAt:Date.now()};
