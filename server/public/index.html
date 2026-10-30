@@ -571,7 +571,7 @@ const show=v=>views.forEach(x=>$('v-'+x).hidden=x!==v);
 function nav(){
   const isAdmin = localStorage.getItem('pq_admin') === '1';
   $('navauth').innerHTML = tk()
-    ? '<a class="btn ghost" style="margin-left:1.6rem;padding:.6rem 1.1rem" href="' + (isAdmin ? '#/admin' : '#/dashboard') + '">Dashboard</a> <a class="link" href="#" id="lo" style="margin-left:1rem;text-decoration:none;color:var(--ink2)">Log out</a>'
+    ? '<a class="btn ghost" style="margin-left:1.6rem;padding:.6rem 1.1rem" href="' + (isAdmin ? '#/admin' : '#/dashboard') + '">' + (isAdmin ? 'Admin' : 'Dashboard') + '</a> <a class="link" href="#" id="lo" style="margin-left:1rem;text-decoration:none;color:var(--ink2)">Log out</a>'
     : '<a class="link" href="#/login" style="margin-left:1.6rem;text-decoration:none;color:var(--ink2)">Log in</a> <a class="btn" style="margin-left:1rem;padding:.6rem 1.1rem" href="#/signup">Sign up</a>';
   const lo = $('lo');
   if(lo) lo.onclick = e => {
@@ -955,7 +955,7 @@ async function admin(){
     myshop:()=>'<div style="background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:2rem;max-width:680px"><h3 style="margin-bottom:0.6rem">Shopkeeper Features</h3><p style="color:var(--ink2);margin-bottom:1.5rem">As an administrator, you can also manage your own shop payment gateway, activation keys, customer print jobs, or download the agent app directly in the shop view.</p><a class="btn" href="#/dashboard" style="display:inline-block;text-decoration:none">Open Shop Dashboard &rarr;</a></div>'
   };
   function draw(){
-    root.innerHTML='<div class="dhead"><h1>Dashboard</h1><p class="lead2">Overview, keys, users, shops, and real-time print activity.</p></div><div class="atabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(t[0]===tab)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="ab">'+body[tab]()+'</div>';
+    root.innerHTML='<div class="dhead"><h1>Admin</h1><p class="lead2">Overview, keys, users, shops, and real-time print activity.</p></div><div class="atabs" role="tablist">'+tabs.map(t=>'<button role="tab" aria-selected="'+(t[0]===tab)+'" data-t="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="ab">'+body[tab]()+'</div>';
     root.querySelectorAll('.atabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;sessionStorage.setItem('pq_at',tab);draw()});
     root.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
       if(b.dataset.a==='revoke'&&!confirm('Revoke this key now? The shop stops printing immediately.'))return;
