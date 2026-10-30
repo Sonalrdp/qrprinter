@@ -117,10 +117,10 @@ function doPost(e) {
         // Generate 6-digit cryptographic-style OTP
         const otp = String(Math.floor(100000 + Math.random() * 900000));
         
-        // Cache OTP with 10 minute expiry in Apps Script Cache
+        // Cache OTP with 1 minute (60 seconds) expiry in Apps Script Cache
         const cache = CacheService.getScriptCache();
-        cache.put('otp_' + email, otp, 600); // 10 minutes
-        if (phone) cache.put('otp_' + phone, otp, 600);
+        cache.put('otp_' + email, otp, 60); // 1 minute
+        if (phone) cache.put('otp_' + phone, otp, 60); // 1 minute
 
         // Send Email with formatted HTML template
         const subject = `PrintQR - Your OTP for ${purpose}: ${otp}`;
@@ -132,7 +132,7 @@ function doPost(e) {
             <div style="background:#F6DCE6;border-radius:8px;padding:16px;text-align:center;margin:20px 0">
               <span style="font-size:32px;font-weight:800;letter-spacing:6px;color:#D4175A">${otp}</span>
             </div>
-            <p style="color:#666;font-size:13px">This code is valid for <b>10 minutes</b>. Do not share this code with anyone.</p>
+            <p style="color:#c6104e;font-size:13px;font-weight:600">⏱️ This code is valid for 1 minute only. After 1 minute it will automatically expire and be removed.</p>
             <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:12px">PrintQR Automated Security System &bull; IST: ${getISTTimestamp()}</p>
           </div>
         `;

@@ -541,13 +541,37 @@ function nav(){$('navauth').innerHTML=tk()?(localStorage.getItem('pq_admin')==='
   const lo=$('lo');if(lo)lo.onclick=e=>{e.preventDefault();localStorage.removeItem('pq_token');localStorage.removeItem('pq_admin');location.hash='#/';route()}}
 /* ---- auth ---- */
 let authOtpSent = false;
+let countdownTimer = null;
+
 function auth(mode){
   show('auth');
   authOtpSent = false;
+  if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
   $('otpw').hidden = true;
   $('a_otp').value = '';
   $('a_err').textContent = '';
   $('a_err').style.color = 'var(--mag)';
+
+  const startOtpTimer = () => {
+    let secondsLeft = 60;
+    const btn = $('resend_otp_btn');
+    if(!btn) return;
+    btn.disabled = true;
+    if(countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      secondsLeft--;
+      if(secondsLeft > 0){
+        btn.textContent = 'Resend (' + secondsLeft + 's)';
+        $('otp_note').textContent = '⏱️ 6-digit OTP sent. Valid for ' + secondsLeft + 's only.';
+      } else {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        btn.disabled = false;
+        btn.textContent = 'Resend OTP';
+        $('otp_note').textContent = '⚠️ OTP expired after 1 minute. Click Resend OTP to get a new code.';
+      }
+    }, 1000);
+  };
 
   if(mode === 'signup'){
     $('authT').textContent = 'Make your shop account';
@@ -597,7 +621,7 @@ function auth(mode){
     const purpose = mode === 'forgot' ? 'Forgot Password' : 'Signup';
     try {
       await api('/api/otp/send', { email, phone, name, purpose });
-      $('otp_note').textContent = 'New OTP sent to ' + (email || phone) + '!';
+      startOtpTimer();
     } catch (e) {
       $('a_err').textContent = e.message;
     }
@@ -625,7 +649,7 @@ function auth(mode){
           await api('/api/otp/send', { name, email, phone, purpose: 'Signup' });
           authOtpSent = true;
           $('otpw').hidden = false;
-          $('otp_note').textContent = '6-digit OTP sent to ' + email + ' (and phone).';
+          startOtpTimer();
           $('a_btn').disabled = false;
           $('a_btn').textContent = 'Verify OTP & Finish Signup';
           return;
@@ -633,6 +657,7 @@ function auth(mode){
 
         if(!otp || otp.length < 6) throw new Error('Please enter the 6-digit OTP sent to your email.');
         const r = await api('/api/signup', { name, email, phone, password: pass, otp });
+        if(countdownTimer) clearInterval(countdownTimer);
         localStorage.setItem('pq_token', r.token);
         localStorage.removeItem('pq_admin');
         location.hash = '#/dashboard';
@@ -646,7 +671,7 @@ function auth(mode){
           $('otpw').hidden = false;
           $('pww').hidden = false;
           $('a_pw_lbl').textContent = 'New Password (6+ characters)';
-          $('otp_note').textContent = '6-digit OTP sent to ' + email + '.';
+          startOtpTimer();
           $('a_btn').disabled = false;
           $('a_btn').textContent = 'Reset Password';
           return;
@@ -655,6 +680,7 @@ function auth(mode){
         if(!otp || otp.length < 6) throw new Error('Please enter the 6-digit OTP.');
         if(pass.length < 6) throw new Error('New password must be at least 6 characters.');
         const r = await api('/api/forgot-password', { identifier: email, otp, newPassword: pass });
+        if(countdownTimer) clearInterval(countdownTimer);
         $('a_err').style.color = '#1F7A47';
         $('a_err').textContent = r.message || 'Password reset! You can now log in.';
         setTimeout(() => { location.hash = '#/login'; }, 1500);

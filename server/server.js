@@ -24,9 +24,9 @@ const RZP_ON=!!(RZP_ID&&RZP_SECRET),RZP_TEST=RZP_ID.startsWith('rzp_test_');
 const FEE_PCT=Math.max(0,Math.min(50,Number(process.env.PLATFORM_FEE_PERCENT)||0)); // your cut of each print payment
 const GS_URL=(process.env.GOOGLE_SCRIPT_URL||'').trim();
 
-// In-memory OTP storage: key = email or phone, val = { otp, expiresAt }
+// In-memory OTP storage: key = email or phone, val = { otp, expiresAt } (1 minute expiry)
 const otpStore=new Map();
-const createOTP=k=>{const o=String(Math.floor(100000+Math.random()*900000));otpStore.set(k,{otp:o,expiresAt:Date.now()+6e5});return o};
+const createOTP=k=>{const o=String(Math.floor(100000+Math.random()*900000));otpStore.set(k,{otp:o,expiresAt:Date.now()+6e4});return o};
 const verifyOTPLocal=(k,o)=>{const e=otpStore.get(k);if(!e)return false;if(Date.now()>e.expiresAt){otpStore.delete(k);return false}if(e.otp===String(o).trim()){otpStore.delete(k);return true}return false};
 
 const syncToGoogleScript=async(action,payload)=>{
@@ -361,7 +361,7 @@ http.createServer(async(req,res)=>{
 
         const key=email||phone;
         const otp=createOTP(key);
-        if(phone&&email)otpStore.set(phone,{otp,expiresAt:Date.now()+6e5});
+        if(phone&&email)otpStore.set(phone,{otp,expiresAt:Date.now()+6e4});
 
         // Send OTP to email via Google Apps Script MailApp
         if(GS_URL&&email){
