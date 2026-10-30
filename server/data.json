@@ -4,17 +4,30 @@
    "id": "4ff9dea99577",
    "name": "Admin",
    "email": "admin@printqr.local",
-   "salt": "346575c46e98ba59",
-   "hash": "4492c20f1a1a7d1238fb48b29803941e2e452d19a872fe074d23e07ef1418eb3",
+   "salt": "261c9bd0df6833df",
+   "hash": "4a28dd26c8515524a54ece4ab328e8cc2de821fc6543ed6c54ae442db8c101e9",
    "demoUsed": true,
    "isAdmin": true
+  },
+  {
+   "id": "9e685457a630",
+   "name": "Rohan Sharma",
+   "email": "shopkeeper_sslm2@test.com",
+   "salt": "d51a74e21ccdf13b",
+   "hash": "3e0bb85c36f7753f532b8ca40d95fae04b48bc9b7cc4f3f0a47ab3eee5087a63",
+   "demoUsed": true,
+   "rzpKeyId": "rzp_test_UserKey123456",
+   "rzpKeySecret": "UserSecretKey789abc",
+   "rzpWebhookSecret": "UserWhSecret999"
   }
  ],
  "sessions": {
   "3c7cdefe4f949310efeb49e798831f60c8dca38470b3e79d": "4ff9dea99577",
   "0b51309a6cdb995c922a22c782a82f3b64adee31b1a0bfd9": "4ff9dea99577",
   "87633b7f78b66937bd7ba0df3955b2a7b60eb94fe32ef761": "4ff9dea99577",
-  "4271bdbf9b1fd0485d0a02323fd19b429683357c4659e310": "4ff9dea99577"
+  "4271bdbf9b1fd0485d0a02323fd19b429683357c4659e310": "4ff9dea99577",
+  "d32ec933fdf7ef9cdc4d07a48770773e884de615006cb7f6": "9e685457a630",
+  "2c1e824cd80e53e6cb720dfbdd64e123cd82f6ea904ba67a": "4ff9dea99577"
  },
  "keys": [
   {
@@ -25,8 +38,28 @@
    "createdAt": 1793389492723,
    "paymentId": "pay_TuEuikCkAoFhfA",
    "activatedAt": 1793389575261,
-   "expiresAt": 1801165575261,
+   "expiresAt": 1793395701830,
    "shopId": "f38ad7c4"
+  },
+  {
+   "key": "PQR-D708-2C7E-11C8",
+   "userId": "4ff9dea99577",
+   "plan": "demo",
+   "price": 0,
+   "createdAt": 1793395688152,
+   "extraMs": 172800000,
+   "activatedAt": 1793395698592,
+   "expiresAt": 1793395698592
+  },
+  {
+   "key": "PQR-10CA-29DA-45E1",
+   "userId": "9e685457a630",
+   "plan": "demo",
+   "price": 0,
+   "createdAt": 1793397001511,
+   "activatedAt": 1793397001514,
+   "expiresAt": 1793569801514,
+   "shopId": "8fff086e"
   }
  ],
  "shops": [
@@ -55,6 +88,34 @@
    "ownerName": "Ankit singh",
    "phone": "8235066919",
    "rzpFor": "9135779897@hdfb|Ankit singh|8235066919"
+  },
+  {
+   "id": "8fff086e",
+   "keyId": "PQR-10CA-29DA-45E1",
+   "name": "Rohan's Xerox Corner",
+   "mode": "default",
+   "upi": "rohan@okhdfcbank",
+   "rates": {
+    "bw": 3,
+    "color": 12
+   },
+   "defaults": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "slots": {
+    "bw": "",
+    "color": "",
+    "duplex": "",
+    "photo": ""
+   },
+   "rzpKeyId": "rzp_test_UserKey123456",
+   "rzpKeySecret": "UserSecretKey789abc",
+   "rzpWebhookSecret": "UserWhSecret999",
+   "ownerName": "Rohan Sharma",
+   "phone": "9876543210"
   }
  ],
  "jobs": [
@@ -72,6 +133,21 @@
    "amount": 2,
    "status": "created",
    "createdAt": 1793390359529
+  },
+  {
+   "id": "f4114e6d2e",
+   "shopId": "8fff086e",
+   "filename": "document.pdf",
+   "options": {
+    "color": "col",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "pages": 2,
+   "amount": 24,
+   "status": "created",
+   "createdAt": 1793397001526
   }
  ],
  "orders": [
@@ -97,9 +173,9 @@
  ],
  "settings": {
   "prices": {
-   "3m": 1,
-   "6m": 2,
-   "12m": 3
+   "3m": 299,
+   "6m": 549,
+   "12m": 999
   }
  }
 }

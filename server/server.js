@@ -22,14 +22,48 @@ const PORT=process.env.PORT||3000;
 const RZP_ID=process.env.RAZORPAY_KEY_ID||'',RZP_SECRET=process.env.RAZORPAY_KEY_SECRET||'',RZP_WH=process.env.RAZORPAY_WEBHOOK_SECRET||'';
 const RZP_ON=!!(RZP_ID&&RZP_SECRET),RZP_TEST=RZP_ID.startsWith('rzp_test_');
 const FEE_PCT=Math.max(0,Math.min(50,Number(process.env.PLATFORM_FEE_PERCENT)||0)); // your cut of each print payment
-const rzp=async(method,url,payload,idem)=>{
-  const r=await fetch('https://api.razorpay.com'+url,{method,headers:{'Content-Type':'application/json',Authorization:'Basic '+Buffer.from(RZP_ID+':'+RZP_SECRET).toString('base64'),...(idem?{'Idempotency-Key':idem}:{})},body:payload?JSON.stringify(payload):undefined});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error((j.error&&j.error.description)||'Razorpay error '+r.status);return j;
+
+function getShopRzpKeys(shop){
+  if(shop){
+    if(shop.rzpKeyId&&shop.rzpKeySecret){
+      return {keyId:shop.rzpKeyId,keySecret:shop.rzpKeySecret,webhookSecret:shop.rzpWebhookSecret||''};
+    }
+    const k=db.keys.find(x=>x.key===shop.keyId);
+    const u=k&&db.users.find(x=>x.id===k.userId);
+    if(u&&u.rzpKeyId&&u.rzpKeySecret){
+      return {keyId:u.rzpKeyId,keySecret:u.rzpKeySecret,webhookSecret:u.rzpWebhookSecret||''};
+    }
+  }
+  if(RZP_ON){
+    return {keyId:RZP_ID,keySecret:RZP_SECRET,webhookSecret:RZP_WH};
+  }
+  return null;
+}
+
+const rzpWithKeys=async(method,url,payload,idem,keys)=>{
+  const kId=(keys&&keys.keyId)||RZP_ID;
+  const kSec=(keys&&keys.keySecret)||RZP_SECRET;
+  if(!kId||!kSec)throw new Error('Razorpay keys not configured');
+  const auth='Basic '+Buffer.from(kId+':'+kSec).toString('base64');
+  const r=await fetch('https://api.razorpay.com'+url,{
+    method,
+    headers:{'Content-Type':'application/json',Authorization:auth,...(idem?{'Idempotency-Key':idem}:{})},
+    body:payload?JSON.stringify(payload):undefined
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error((j.error&&j.error.description)||'Razorpay error '+r.status);
+  return j;
 };
+const rzp=(method,url,payload,idem)=>rzpWithKeys(method,url,payload,idem,null);
+
 const hmac=(s,k)=>crypto.createHmac('sha256',k).update(s).digest('hex');
 const same=(a,b)=>{a=Buffer.from(String(a));b=Buffer.from(String(b));return a.length===b.length&&crypto.timingSafeEqual(a,b)};
-const sigOk=b=>!!(b.razorpay_order_id&&b.razorpay_payment_id&&same(hmac(b.razorpay_order_id+'|'+b.razorpay_payment_id,RZP_SECRET),b.razorpay_signature||''));
-console.log(RZP_ON?'Razorpay ON ('+(RZP_TEST?'TEST':'LIVE')+' mode)':'NOTE: Razorpay keys not set - payments are SIMULATED (testing only).');
+const sigOk=(b,sec)=>{
+  const k=sec||RZP_SECRET;
+  return !!(k&&b.razorpay_order_id&&b.razorpay_payment_id&&b.razorpay_signature&&same(hmac(b.razorpay_order_id+'|'+b.razorpay_payment_id,k),b.razorpay_signature));
+};
+const sigOkRaw=(rawBuf,sig,sec)=>!!(sec&&sig&&same(hmac(rawBuf,sec),sig));
+console.log(RZP_ON?'Razorpay ON ('+(RZP_TEST?'TEST':'LIVE')+' mode)':'NOTE: Platform Razorpay keys not set - users can still use their own keys.');
 // ---- EDIT YOUR PRICES (INR) ----
 const DUR={demo:48*36e5,'3m':90*864e5,'6m':180*864e5,'12m':365*864e5};
 const NAMES={demo:'48-hour demo','3m':'3 months','6m':'6 months','12m':'12 months'};
@@ -67,18 +101,23 @@ if (ADMIN_EMAIL && ADMIN_PASSWORD) {
 const body=req=>new Promise((ok,no)=>{let c=[],n=0;req.on('data',d=>{n+=d.length;if(n>40e6){no(new Error('File too large'));req.destroy();return}c.push(d)});req.on('end',()=>{try{ok(JSON.parse(Buffer.concat(c).toString()||'{}'))}catch(e){ok({})}})});
 const live=k=>k&&k.expiresAt&&Date.now()<k.expiresAt;
 const shopActive=s=>live(db.keys.find(k=>k.key===s.keyId));
-const pub=s=>({id:s.id,name:s.name,mode:s.mode,defaults:s.defaults,rates:s.rates,upi:s.upi,active:shopActive(s)});
-const full=s=>({...pub(s),slots:s.slots,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!s.linkedAccountId});
+const pub=s=>({id:s.id,name:s.name,mode:s.mode,defaults:s.defaults,rates:s.rates,upi:s.upi,active:shopActive(s),hasCustomRzp:!!(s.rzpKeyId&&s.rzpKeySecret)});
+const full=s=>({...pub(s),slots:s.slots,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!(s.linkedAccountId||(s.rzpKeyId&&s.rzpKeySecret)),rzpKeyId:s.rzpKeyId||'',hasRzpSecret:!!s.rzpKeySecret,rzpWebhookSecret:s.rzpWebhookSecret||''});
 function newKey(userId,plan,price,extra){const k={key:'PQR-'+[0,1,2].map(()=>rid(2).toUpperCase()).join('-'),userId,plan,price,createdAt:Date.now(),...extra};db.keys.push(k);return k}
-async function createOrder(o,receipt,transfers){
+async function createOrder(o,receipt,transfers,keys){
+  const activeKeys=keys||(RZP_ON?{keyId:RZP_ID,keySecret:RZP_SECRET}:null);
   try{
-    const r=await rzp('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind},...(transfers?{transfers}:{})});
-    o.id=r.id;db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
+    const r=await rzpWithKeys('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind},...(transfers?{transfers}:{})},undefined,activeKeys);
+    o.id=r.id;
+    if(activeKeys){o.rzpKeyId=activeKeys.keyId;o.rzpKeySecret=activeKeys.keySecret;}
+    db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
   }catch(e){
     if(transfers&&(e.message||'').toLowerCase().includes('route')){
       console.warn('[Razorpay Route Warning] Retrying without transfers:', e.message);
-      const r=await rzp('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind}});
-      o.id=r.id;db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
+      const r=await rzpWithKeys('POST','/v1/orders',{amount:o.amount,currency:'INR',receipt,notes:{kind:o.kind}},undefined,activeKeys);
+      o.id=r.id;
+      if(activeKeys){o.rzpKeyId=activeKeys.keyId;o.rzpKeySecret=activeKeys.keySecret;}
+      db.orders.push(o);save();return{id:r.id,amount:o.amount,currency:'INR'};
     }
     throw e;
   }
@@ -92,11 +131,32 @@ function settleOrder(o,paymentId){
 }
 async function webhook(req,res){
   const c=[];for await(const d of req)c.push(d);const raw=Buffer.concat(c);
-  if(!RZP_WH||!same(hmac(raw,RZP_WH),req.headers['x-razorpay-signature']||'')){res.writeHead(400);return res.end('bad signature')}
-  try{const ev=JSON.parse(raw.toString());
+  const sig=req.headers['x-razorpay-signature']||'';
+  let ev;try{ev=JSON.parse(raw.toString())}catch(e){res.writeHead(400);return res.end('invalid json')}
+  let verified=false;
+  if(RZP_WH&&sigOkRaw(raw,sig,RZP_WH))verified=true;
+  const pay=ev.payload&&ev.payload.payment&&ev.payload.payment.entity;
+  const o=pay&&pay.order_id&&db.orders.find(x=>x.id===pay.order_id);
+  if(!verified&&o){
+    const j=o.jobId&&db.jobs.find(x=>x.id===o.jobId);
+    const s=j&&db.shops.find(x=>x.id===j.shopId);
+    const keys=getShopRzpKeys(s);
+    if(keys?.webhookSecret&&sigOkRaw(raw,sig,keys.webhookSecret))verified=true;
+    else if(keys?.keySecret&&sigOkRaw(raw,sig,keys.keySecret))verified=true;
+    else if(o.rzpKeySecret&&sigOkRaw(raw,sig,o.rzpKeySecret))verified=true;
+  }
+  if(!verified&&sig){
+    for(const u of db.users){
+      if(u.rzpWebhookSecret&&sigOkRaw(raw,sig,u.rzpWebhookSecret)){verified=true;break}
+      if(u.rzpKeySecret&&sigOkRaw(raw,sig,u.rzpKeySecret)){verified=true;break}
+    }
+  }
+  if(!verified&&(RZP_WH||(o&&(o.rzpKeySecret||o.rzpKeyId)))){
+    res.writeHead(400);return res.end('bad signature');
+  }
+  try{
     if(ev.event==='payment.captured'||ev.event==='order.paid'){
-      const pay=ev.payload.payment&&ev.payload.payment.entity,o=pay&&db.orders.find(x=>x.id===pay.order_id);
-      if(o&&pay.amount===o.amount)settleOrder(o,pay.id);
+      if(o&&pay&&pay.amount===o.amount)settleOrder(o,pay.id);
     }
   }catch(e){}
   res.writeHead(200);res.end('ok');
@@ -115,7 +175,50 @@ http.createServer(async(req,res)=>{
       const ak=db.keys.find(k=>k.key===(u.searchParams.get('key')||b.key)&&k.shopId&&live(k));
       const ashop=ak&&db.shops.find(s=>s.id===ak.shopId);
       let r;
-      if(p==='/api/config')return J({keyId:RZP_ON?RZP_ID:null,test:RZP_TEST});
+      if(p==='/api/config'){
+        const sid=u.searchParams.get('shopId');
+        const s=sid&&db.shops.find(x=>x.id===sid);
+        const keys=getShopRzpKeys(s);
+        if(keys)return J({keyId:keys.keyId,test:keys.keyId.startsWith('rzp_test_'),custom:keys.keyId!==RZP_ID});
+        return J({keyId:RZP_ON?RZP_ID:null,test:RZP_TEST,custom:false});
+      }
+      if(p==='/api/user/rzp'&&m==='GET'){
+        if(!me)return J({error:'Log in first'},401);
+        return J({
+          keyId:me.rzpKeyId||'',
+          hasSecret:!!me.rzpKeySecret,
+          webhookSecret:me.rzpWebhookSecret||'',
+          isConfigured:!!(me.rzpKeyId&&me.rzpKeySecret)
+        });
+      }
+      if(p==='/api/user/rzp'&&m==='POST'){
+        if(!me)return J({error:'Log in first'},401);
+        const keyId=(b.keyId||'').trim();
+        const keySecret=(b.keySecret||'').trim();
+        const webhookSecret=(b.webhookSecret||'').trim();
+        if(!keyId)return J({error:'Please enter your Razorpay Key ID.'},400);
+        if(!keyId.startsWith('rzp_live_')&&!keyId.startsWith('rzp_test_')){
+          return J({error:'Invalid Key ID. Must start with rzp_live_ or rzp_test_.'},400);
+        }
+        if(!me.rzpKeySecret&&!keySecret){
+          return J({error:'Please enter your Razorpay Key Secret.'},400);
+        }
+        me.rzpKeyId=keyId;
+        if(keySecret)me.rzpKeySecret=keySecret;
+        if(webhookSecret!==undefined)me.rzpWebhookSecret=webhookSecret;
+
+        // Sync to all shops owned by this user
+        const userKeys=db.keys.filter(k=>k.userId===me.id).map(k=>k.key);
+        db.shops.forEach(s=>{
+          if(userKeys.includes(s.keyId)){
+            s.rzpKeyId=me.rzpKeyId;
+            s.rzpKeySecret=me.rzpKeySecret;
+            s.rzpWebhookSecret=me.rzpWebhookSecret;
+          }
+        });
+        save();
+        return J({ok:1,isConfigured:true,keyId:me.rzpKeyId,webhookSecret:me.rzpWebhookSecret||''});
+      }
       if(p==='/api/signup'&&m==='POST'){
         if(!b.name||!/^\S+@\S+\.\S+$/.test(b.email||'')||(b.password||'').length<6)return J({error:'Enter your name, a valid email and a password of 6+ characters.'},400);
         const email=b.email.toLowerCase();
@@ -153,7 +256,7 @@ http.createServer(async(req,res)=>{
         save();
         return J({ token: t, admin: !!usr.isAdmin });
       }
-      if(p==='/api/me'){if(!me)return J({error:'Log in first'},401);return J({name:me.name,email:me.email,demoUsed:me.demoUsed,prices:PRICES,names:NAMES})}
+      if(p==='/api/me'){if(!me)return J({error:'Log in first'},401);return J({name:me.name,email:me.email,demoUsed:me.demoUsed,prices:PRICES,names:NAMES,hasRzp:!!(me.rzpKeyId&&me.rzpKeySecret),rzpKeyId:me.rzpKeyId||''})}
       if(p==='/api/buy'&&m==='POST'){
         if(!me)return J({error:'Log in first'},401);
         if(b.plan==='demo'){if(me.demoUsed)return J({error:'You have already used your 48-hour demo.'},400);me.demoUsed=true}
@@ -179,31 +282,39 @@ http.createServer(async(req,res)=>{
         const usr=db.users.find(x=>x.id===k.userId);
         if(!k.activatedAt){
           k.activatedAt=Date.now();k.expiresAt=k.activatedAt+DUR[k.plan]+(k.extraMs||0);
-          const s={id:rid(4),keyId:k.key,name:usr.name+"'s shop",mode:'default',upi:'',rates:{bw:2,color:10},defaults:{color:'bw',copies:1,duplex:false,range:''},slots:{bw:'',color:'',duplex:'',photo:''}};
+          const s={id:rid(4),keyId:k.key,name:usr.name+"'s shop",mode:'default',upi:'',rates:{bw:2,color:10},defaults:{color:'bw',copies:1,duplex:false,range:''},slots:{bw:'',color:'',duplex:'',photo:''},rzpKeyId:usr.rzpKeyId||'',rzpKeySecret:usr.rzpKeySecret||'',rzpWebhookSecret:usr.rzpWebhookSecret||''};
           db.shops.push(s);k.shopId=s.id;
+        }else{
+          const s=db.shops.find(x=>x.id===k.shopId);
+          if(s&&usr&&usr.rzpKeyId&&!s.rzpKeyId){
+            s.rzpKeyId=usr.rzpKeyId;s.rzpKeySecret=usr.rzpKeySecret;s.rzpWebhookSecret=usr.rzpWebhookSecret;
+          }
         }
         save();return J({shop:full(db.shops.find(s=>s.id===k.shopId)),user:{name:usr.name,email:usr.email},plan:NAMES[k.plan],expiresAt:k.expiresAt,key:k.key});
       }
       if(p==='/api/agent/settings'&&m==='POST'){
         if(!ashop)return J({error:'Key not valid'},401);
-        ['name','mode','upi','rates','defaults','slots','ownerName','phone'].forEach(f=>{if(b[f]!==undefined)ashop[f]=b[f]});
-        // Payout setup: link this shop's UPI ID to Razorpay Route so customer payments go straight to the shop.
-        // UPI linked accounts need LIVE keys + VPA Settlements enabled by Razorpay support.
+        ['name','mode','upi','rates','defaults','slots','ownerName','phone','rzpKeyId','rzpKeySecret','rzpWebhookSecret'].forEach(f=>{if(b[f]!==undefined)ashop[f]=b[f]});
+        const kk=db.keys.find(x=>x.key===ashop.keyId),own=kk&&db.users.find(x=>x.id===kk.userId);
+        if(own){
+          if(b.rzpKeyId)own.rzpKeyId=b.rzpKeyId;
+          if(b.rzpKeySecret)own.rzpKeySecret=b.rzpKeySecret;
+          if(b.rzpWebhookSecret!==undefined)own.rzpWebhookSecret=b.rzpWebhookSecret;
+        }
+        const hasOwnKeys=!!(ashop.rzpKeyId&&ashop.rzpKeySecret);
         const sig=[ashop.upi,ashop.ownerName,ashop.phone].join('|');
-        if(RZP_ON&&!RZP_TEST&&ashop.upi&&sig!==ashop.rzpFor){
+        if(!hasOwnKeys&&RZP_ON&&!RZP_TEST&&ashop.upi&&sig!==ashop.rzpFor){
           const nm=(ashop.ownerName||'').trim(),ph=String(ashop.phone||'').replace(/\D/g,'').slice(-10);
-          if(nm.length<4||ph.length!==10){save();return J({error:'Enter the name on your UPI account (4+ letters) and your 10-digit mobile number.'},400)}
-          const kk=db.keys.find(x=>x.key===ashop.keyId),own=db.users.find(x=>x.id===kk.userId),ref='shop_'+ashop.id+'_'+rid(3);
-          try{
-            const a=await rzp('POST','/v2/accounts',{type:'route',tnc_accepted:true,reference_id:ref,legal_business_name:nm,business_type:'individual',email:own.email,phone:'+91'+ph,
-              settlement_accounts:[{method:'upi',upi:{vpa:ashop.upi,beneficiary_name:nm,currency:'INR',is_default:true}}]},ref);
-            ashop.linkedAccountId=a.id;ashop.rzpFor=sig;
-          }catch(e){
-            console.warn('[Razorpay Route Warning]', e.message);
-            // If Route is not yet enabled by Razorpay support, save settings and allow direct collection
-            ashop.rzpFor=sig;
-            save();
-            return J(full(ashop));
+          if(nm.length>=4&&ph.length===10&&own){
+            const ref='shop_'+ashop.id+'_'+rid(3);
+            try{
+              const a=await rzp('POST','/v2/accounts',{type:'route',tnc_accepted:true,reference_id:ref,legal_business_name:nm,business_type:'individual',email:own.email,phone:'+91'+ph,
+                settlement_accounts:[{method:'upi',upi:{vpa:ashop.upi,beneficiary_name:nm,currency:'INR',is_default:true}}]},ref);
+              ashop.linkedAccountId=a.id;ashop.rzpFor=sig;
+            }catch(e){
+              console.warn('[Razorpay Route Warning]', e.message);
+              ashop.rzpFor=sig;
+            }
           }
         }
         save();return J(full(ashop));
@@ -237,22 +348,30 @@ http.createServer(async(req,res)=>{
       if((r=p.match(/^\/api\/jobs\/(\w+)$/))){const j=db.jobs.find(x=>x.id===r[1]);return j?J({status:j.status,amount:j.amount}):J({error:'No job'},404)}
       if((r=p.match(/^\/api\/jobs\/(\w+)\/pay$/))&&m==='POST'){
         const j=db.jobs.find(x=>x.id===r[1]);if(!j)return J({error:'No job'},404);
-        if(RZP_ON){
-          // Real payment: create a Razorpay order whose money is split to the shop's linked UPI account.
+        const s=db.shops.find(x=>x.id===j.shopId);
+        const shopKeys=getShopRzpKeys(s);
+        if(shopKeys){
+          // Real payment: create a Razorpay order using the shop's keys
           if(j.status!=='created')return J({status:j.status});
-          const s=db.shops.find(x=>x.id===j.shopId),paise=Math.round(j.amount*100);let transfers;
-          if(!RZP_TEST && s && s.linkedAccountId){
+          const paise=Math.round(j.amount*100);let transfers;
+          const isPlatformKey=shopKeys.keyId===RZP_ID;
+          if(isPlatformKey&&!RZP_TEST&&s&&s.linkedAccountId){
             transfers=[{account:s.linkedAccountId,amount:paise-Math.round(paise*FEE_PCT/100),currency:'INR',notes:{job:j.id}}];
           }
           const o={kind:'job',jobId:j.id,amount:paise,status:'created',createdAt:Date.now()};
-          return J({order:await createOrder(o,'job_'+j.id,transfers),keyId:RZP_ID,shopName:s&&s.name});
+          return J({order:await createOrder(o,'job_'+j.id,transfers,shopKeys),keyId:shopKeys.keyId,shopName:s&&s.name});
         }
         // PAYMENT NOTE: simulated mode only (no Razorpay keys). Trusts the customer's "I've paid" tap.
         if(j.status==='created'){j.status='paid';save()}return J({status:j.status});
       }
       if((r=p.match(/^\/api\/jobs\/(\w+)\/verify$/))&&m==='POST'){
-        const o=RZP_ON&&db.orders.find(x=>x.id===b.razorpay_order_id&&x.kind==='job'&&x.jobId===r[1]);
-        if(!o||!sigOk(b))return J({error:'Payment could not be verified.'},400);
+        const o=db.orders.find(x=>x.id===b.razorpay_order_id&&x.kind==='job'&&x.jobId===r[1]);
+        if(!o)return J({error:'Payment order not found.'},400);
+        const j=db.jobs.find(x=>x.id===r[1]);
+        const s=j&&db.shops.find(x=>x.id===j.shopId);
+        const shopKeys=getShopRzpKeys(s);
+        const secret=o.rzpKeySecret||(shopKeys&&shopKeys.keySecret)||RZP_SECRET;
+        if(!sigOk(b,secret))return J({error:'Payment could not be verified.'},400);
         settleOrder(o,b.razorpay_payment_id);return J({status:'paid'});
       }
       if(p.startsWith('/api/admin/')){

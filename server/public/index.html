@@ -194,6 +194,11 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 .pill{font-size:.85rem;padding:.2rem .7rem;border-radius:999px;background:var(--magdim);color:var(--mag)}
 .pill.on{background:#DDF0E4;color:#1F7A47}.pill.off{background:#E7E7E3;color:var(--mute)}
 .dl{margin-bottom:1.6rem}.inst{padding-left:1.4rem;max-width:62ch}.inst li{margin:.5rem 0}
+.rzp-card-link{display:flex;flex-direction:column;justify-content:space-between;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.2rem 1.4rem;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
+.rzp-card-link:hover{border-color:var(--mag);transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(212,23,90,.25)}
+.rzp-step-num{display:inline-block;font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--mag);background:var(--magdim);padding:0.2rem 0.55rem;border-radius:6px;width:fit-content;margin-bottom:0.6rem}
+.rzp-card-link b{font:800 1.15rem var(--display);letter-spacing:-.01em;margin-bottom:0.35rem;display:block}
+.rzp-card-link span{color:var(--mute);font-size:0.9rem;line-height:1.4}
 #v-cust{padding:1.4rem 0 4rem;width:min(460px,92vw);margin-inline:auto}
 #v-cust h1{font-size:2.4rem;margin:.4rem 0 .2rem}
 #v-cust .sub{color:var(--ink2);margin-bottom:1.4rem}
@@ -359,7 +364,73 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 <div class="err" id="a_err" role="alert"></div>
 <button class="btn" id="a_btn" type="submit"></button>
 <p class="swap"><span id="a_sw"></span> <a id="a_lnk" href="#"></a></p></form></div></main>
-<main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, get your key, install the app on your shop PC.</p></div>
+<main id="v-dash" class="wrap" hidden><div class="dhead"><h1 id="dhi"></h1><p class="lead2">Buy a plan, get your key, configure Razorpay for customer payments, and install the app on your shop PC.</p></div>
+
+<section class="dsec" id="rzp-sec">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:0.8rem">
+    <h2 style="margin-bottom:0">Payment Gateway (Your Razorpay account)</h2>
+    <span id="rzp-status-pill" class="pill"></span>
+  </div>
+  <p class="lead2" style="max-width:72ch;margin-top:0.4rem;margin-bottom:1.6rem">
+    Connect your own Razorpay keys so all print payments from customers go <strong>100% directly to your own bank account / UPI</strong>.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:1.2rem;margin-bottom:2rem">
+    <a href="https://dashboard.razorpay.com/signin" target="_blank" rel="noopener" class="rzp-card-link">
+      <div>
+        <span class="rzp-step-num">Step 1</span>
+        <b>1. Log in / Sign up &rarr;</b>
+        <span>Create or log in to your Razorpay merchant dashboard.</span>
+      </div>
+      <small style="color:var(--mag);font-weight:600;margin-top:0.8rem;display:block">dashboard.razorpay.com &nearr;</small>
+    </a>
+    <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noopener" class="rzp-card-link">
+      <div>
+        <span class="rzp-step-num">Step 2</span>
+        <b>2. Generate API Keys &rarr;</b>
+        <span>Generate your Key ID and Key Secret to accept payments.</span>
+      </div>
+      <small style="color:var(--mag);font-weight:600;margin-top:0.8rem;display:block">API Keys Settings &nearr;</small>
+    </a>
+    <a href="https://dashboard.razorpay.com/app/webhooks" target="_blank" rel="noopener" class="rzp-card-link">
+      <div>
+        <span class="rzp-step-num">Step 3</span>
+        <b>3. Add Webhook &rarr;</b>
+        <span>Receive automatic print confirmation when customers pay.</span>
+      </div>
+      <small style="color:var(--mag);font-weight:600;margin-top:0.8rem;display:block">Webhooks Settings &nearr;</small>
+    </a>
+  </div>
+
+  <div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.8rem">
+    <b style="display:block;font-size:0.95rem;margin-bottom:0.4rem">Webhook URL to enter in Razorpay Webhooks:</b>
+    <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap">
+      <code id="rzp_wh_url" style="background:var(--paper);padding:0.5rem 0.8rem;border-radius:8px;font-size:0.92rem;flex:1;word-break:break-all;font-family:Consolas,monospace"></code>
+      <button type="button" class="btn ghost" id="copy_wh_btn" style="padding:0.45rem 1rem;font-size:0.9rem">Copy Webhook URL</button>
+    </div>
+    <small style="color:var(--mute);display:block;margin-top:0.6rem">
+      Active events to tick in Razorpay: <code>payment.captured</code> and <code>order.paid</code>
+    </small>
+  </div>
+
+  <form id="rzpF" style="background:#fff;border:1.5px solid var(--ink);border-radius:14px;padding:1.8rem;max-width:720px">
+    <h3 style="margin-bottom:1.2rem;font-size:1.3rem">Enter your Razorpay credentials</h3>
+    <label for="u_rzp_id" style="display:block;font-weight:600;margin-bottom:0.35rem">RAZORPAY_KEY_ID</label>
+    <input id="u_rzp_id" placeholder="rzp_live_... or rzp_test_..." required style="width:100%;padding:0.75rem 0.9rem;border:1.5px solid var(--line);border-radius:9px;margin-bottom:1.2rem;font-family:Consolas,monospace">
+    
+    <label for="u_rzp_sec" style="display:block;font-weight:600;margin-bottom:0.35rem">RAZORPAY_KEY_SECRET</label>
+    <input id="u_rzp_sec" type="password" placeholder="Enter Key Secret" style="width:100%;padding:0.75rem 0.9rem;border:1.5px solid var(--line);border-radius:9px;margin-bottom:1.2rem;font-family:Consolas,monospace">
+    
+    <label for="u_rzp_wh" style="display:block;font-weight:600;margin-bottom:0.35rem">RAZORPAY_WEBHOOK_SECRET <small style="color:var(--mute);font-weight:normal">(Optional - secret you entered in Razorpay webhook)</small></label>
+    <input id="u_rzp_wh" placeholder="Webhook Secret" style="width:100%;padding:0.75rem 0.9rem;border:1.5px solid var(--line);border-radius:9px;margin-bottom:1.4rem;font-family:Consolas,monospace">
+    
+    <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap">
+      <button type="submit" class="btn" id="save_rzp_btn">Save Razorpay Keys</button>
+      <span id="rzp_msg" style="font-weight:500"></span>
+    </div>
+  </form>
+</section>
+
 <section class="dsec"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
 <section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
 <section class="dsec"><h2>Download and install</h2>
@@ -472,6 +543,61 @@ async function dash(){
   show('dash');
   let me;try{me=await api('/api/me')}catch(e){localStorage.removeItem('pq_token');location.hash='#/login';return}
   $('dhi').textContent='Hi '+me.name.split(' ')[0]+', let\u2019s get your shop set up.';
+
+  // Setup Razorpay Section
+  const whUrl = window.location.origin + '/api/razorpay/webhook';
+  if ($('rzp_wh_url')) $('rzp_wh_url').textContent = whUrl;
+  if ($('copy_wh_btn')) $('copy_wh_btn').onclick = () => {
+    navigator.clipboard && navigator.clipboard.writeText(whUrl);
+    $('copy_wh_btn').textContent = 'Copied!';
+    setTimeout(() => { if($('copy_wh_btn')) $('copy_wh_btn').textContent = 'Copy Webhook URL'; }, 2000);
+  };
+
+  let rzpInfo = { keyId: '', hasSecret: false, webhookSecret: '', isConfigured: false };
+  try {
+    rzpInfo = await api('/api/user/rzp');
+  } catch (e) {}
+
+  const pill = $('rzp-status-pill');
+  if (pill) {
+    if (rzpInfo.isConfigured) {
+      pill.className = 'pill on';
+      pill.textContent = 'Active: ' + rzpInfo.keyId.slice(0, 14) + '...';
+    } else {
+      pill.className = 'pill';
+      pill.textContent = 'Setup required';
+    }
+  }
+  if ($('u_rzp_id')) $('u_rzp_id').value = rzpInfo.keyId || '';
+  if ($('u_rzp_sec')) {
+    $('u_rzp_sec').value = '';
+    $('u_rzp_sec').placeholder = rzpInfo.hasSecret ? '•••••••••••••••• (Secret saved. Leave blank to keep)' : 'Enter Key Secret';
+  }
+  if ($('u_rzp_wh')) $('u_rzp_wh').value = rzpInfo.webhookSecret || '';
+
+  $('rzpF').onsubmit = async (e) => {
+    e.preventDefault();
+    const msg = $('rzp_msg');
+    msg.style.color = 'var(--ink)';
+    msg.textContent = 'Saving...';
+    try {
+      const res = await api('/api/user/rzp', {
+        keyId: $('u_rzp_id').value.trim(),
+        keySecret: $('u_rzp_sec').value.trim(),
+        webhookSecret: $('u_rzp_wh').value.trim()
+      });
+      msg.style.color = '#1F7A47';
+      msg.textContent = '✓ Saved! Payments will go directly to your Razorpay account.';
+      if (pill) {
+        pill.className = 'pill on';
+        pill.textContent = 'Active: ' + res.keyId.slice(0, 14) + '...';
+      }
+    } catch (err) {
+      msg.style.color = 'var(--mag)';
+      msg.textContent = err.message;
+    }
+  };
+
   const plans=[['demo','48-hour demo','Try everything for two days. One per account.',null],['3m','3 months','For a new shop or a busy season.',me.prices['3m']],['6m','6 months','Half a year, no renewal to remember.',me.prices['6m']],['12m','12 months','One key for the whole year.',me.prices['12m']]];
   $('planlist').innerHTML=plans.map(p=>'<li><b>'+p[1]+'</b><span>'+p[2]+'</span><span class="pr">'+(p[3]?'\u20B9'+p[3]:'Free')+'</span><button class="btn ghost" data-p="'+p[0]+'"'+(p[0]==='demo'&&me.demoUsed?' disabled style="opacity:.4;cursor:default"':'')+'>'+(p[0]==='demo'&&me.demoUsed?'Used':'Select')+'</button></li>').join('');
   $('buybox').innerHTML='';
@@ -532,7 +658,7 @@ async function cust(sid){
     catch(x){$('ce').textContent=x.message;$('ds').textContent='Tap to upload'}};
   $('pay').onclick=async()=>{$('pay').disabled=true;$('ce').textContent='';
     try{const j=await api('/api/shop/'+sid+'/jobs',{filename:st.name,data:st.b64,pages:st.pages,options:st.o});
-      const cfg=await api('/api/config');
+      const cfg=await api('/api/config?shopId='+sid);
       if(cfg.keyId){ /* real payment through Razorpay: money goes to the shop's UPI */
         $('cb').hidden=true;$('drop').hidden=true;
         const rp=await api('/api/jobs/'+j.id+'/pay',{});await load('https://checkout.razorpay.com/v1/checkout.js');

@@ -101,6 +101,16 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
         <div><label for="phone">Your mobile number</label><input id="phone" inputmode="numeric" placeholder="10-digit number"></div>
         <div><label for="r_bw">Price per page, black &amp; white (₹)</label><input id="r_bw" type="number" min="0" step="0.5"></div>
         <div><label for="r_color">Price per page, colour (₹)</label><input id="r_color" type="number" min="0" step="0.5"></div>
+        <div><label for="rzp_id">Your Razorpay Key ID</label><input id="rzp_id" placeholder="rzp_live_... or rzp_test_..."></div>
+        <div><label for="rzp_sec">Your Razorpay Key Secret</label><input id="rzp_sec" type="password" placeholder="Leave blank to keep current secret"></div>
+      </div>
+      <div style="margin-top:0.9rem;padding:0.75rem 1rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;font-size:0.88rem;color:var(--mute)">
+        <b style="color:var(--ink);display:block;margin-bottom:0.25rem">Direct Razorpay Collection:</b>
+        Customer print money goes 100% directly to your own Razorpay account.
+        <div style="margin-top:0.35rem">
+          <a href="https://dashboard.razorpay.com/signin" target="_blank" style="color:var(--mag);font-weight:600;margin-right:1.2rem">1. Log in / Sign up &rarr;</a>
+          <a href="https://dashboard.razorpay.com/app/keys" target="_blank" style="color:var(--mag);font-weight:600">2. Get API Keys &rarr;</a>
+        </div>
       </div>
       <div class="row"><button class="btn" id="save">Save settings</button><span id="saved" class="ok"></span><span class="err" id="serr"></span></div>
     </div>
@@ -131,6 +141,8 @@ function fillSettings(){
   const s=S.cfg.shop;document.querySelector('input[name=mode][value='+s.mode+']').checked=true;modeUI();
   $('d_color').value=s.defaults.color;$('d_copies').value=s.defaults.copies;$('d_duplex').value=s.defaults.duplex?'1':'0';$('d_range').value=s.defaults.range||'';
   $('shopname').value=s.name;$('upi').value=s.upi;$('owner').value=s.ownerName||'';$('phone').value=s.phone||'';$('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
+  if($('rzp_id'))$('rzp_id').value=s.rzpKeyId||'';
+  if($('rzp_sec')){$('rzp_sec').value='';$('rzp_sec').placeholder=s.hasRzpSecret?'•••••••••••••••• (Secret saved)':'Enter Key Secret';}
 }
 function modeUI(){const v=document.querySelector('input[name=mode]:checked').value;$('m0').classList.toggle('sel',v==='default');$('m1').classList.toggle('sel',v==='locked')}
 function setTab(t){tab=t;['1','2'].forEach(x=>{$('p'+x).classList.toggle('on',x===t);document.querySelector('.tab[data-t="'+x+'"]').setAttribute('aria-selected',x===t)})}
@@ -142,11 +154,15 @@ $('abtn').onclick=async()=>{$('aerr').textContent='';try{await api('/local/activ
 $('save').onclick=async()=>{
   $('serr').textContent='';$('saved').textContent='';
   const upi=$('upi').value.trim();if(!/^[\w.\-]+@[\w]+$/.test(upi)){$('serr').textContent='Enter a valid UPI ID, like name@bank.';return}
+  const rzpId=$('rzp_id')?$('rzp_id').value.trim():'';
+  const rzpSec=$('rzp_sec')?$('rzp_sec').value.trim():'';
   try{await api('/local/settings',{
     name:$('shopname').value.trim()||S.cfg.shop.name,upi,ownerName:$('owner').value.trim(),phone:$('phone').value.trim(),mode:document.querySelector('input[name=mode]:checked').value,
     rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
     defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
-    slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value}});
+    slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value},
+    rzpKeyId:rzpId,
+    ...(rzpSec?{rzpKeySecret:rzpSec}:{})});
     $('saved').textContent='Saved. Your QR page is ready.';await load()}catch(e){$('serr').textContent=e.message}
 };
 $('qrb').onclick=async()=>{const q=await api('/local/qr');$('q_shop').textContent=S.cfg.shop.name;$('q_img').src=q.img;$('qm').showModal()};
