@@ -1,10 +1,11 @@
 {
   "name": "printqr-site",
   "version": "1.0.0",
-  "description": "PrintQR website and server",
+  "description": "PrintQR website and server with Razorpay and Razorpay Route",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "test": "node test_payments.js"
   },
   "license": "MIT"
 }
