@@ -94,12 +94,8 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
         <div><label for="d_duplex">Sides</label><select id="d_duplex"><option value="0">One side</option><option value="1">Both sides</option></select></div>
         <div><label for="d_range">Pages (blank = all)</label><input id="d_range" placeholder="e.g. 1-3,5"></div>
       </div>
-      <h3 style="margin-top:1.6rem">Shop and payment</h3>
+      <h3 style="margin-top:1.6rem">Print rates &amp; Payment</h3>
       <div class="g2">
-        <div><label for="shopname">Shop name on the standee</label><input id="shopname"></div>
-        <div><label for="upi">Your UPI ID</label><input id="upi" placeholder="name@bank"></div>
-        <div><label for="owner">Name on your UPI / bank account</label><input id="owner" placeholder="As shown in your UPI app"></div>
-        <div><label for="phone">Your mobile number</label><input id="phone" inputmode="numeric" placeholder="10-digit number"></div>
         <div><label for="r_bw">Price per page, black &amp; white (₹)</label><input id="r_bw" type="number" min="0" step="0.5"></div>
         <div><label for="r_color">Price per page, colour (₹)</label><input id="r_color" type="number" min="0" step="0.5"></div>
         <div><label for="rzp_id">Your Razorpay Key ID</label><input id="rzp_id" placeholder="rzp_live_... or rzp_test_..."></div>
@@ -141,7 +137,7 @@ async function fillPrinters(){
 function fillSettings(){
   const s=S.cfg.shop;document.querySelector('input[name=mode][value='+s.mode+']').checked=true;modeUI();
   $('d_color').value=s.defaults.color;$('d_copies').value=s.defaults.copies;$('d_duplex').value=s.defaults.duplex?'1':'0';$('d_range').value=s.defaults.range||'';
-  $('shopname').value=s.name;$('upi').value=s.upi;$('owner').value=s.ownerName||'';$('phone').value=s.phone||'';$('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
+  $('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
   if($('rzp_id'))$('rzp_id').value=s.rzpKeyId||'';
   if($('rzp_sec')){$('rzp_sec').value='';$('rzp_sec').placeholder=s.hasRzpSecret?'•••••••••••••••• (Secret saved)':'Enter Key Secret';}
 }
@@ -154,11 +150,10 @@ $('refresh').onclick=fillPrinters;
 $('abtn').onclick=async()=>{$('aerr').textContent='';try{await api('/local/activate',{serverUrl:$('srv').value.trim(),key:$('key').value.trim()});await boot()}catch(e){$('aerr').textContent=e.message}};
 $('save').onclick=async()=>{
   $('serr').textContent='';$('saved').textContent='';
-  const upi=$('upi').value.trim();if(!/^[\w.\-]+@[\w]+$/.test(upi)){$('serr').textContent='Enter a valid UPI ID, like name@bank.';return}
   const rzpId=$('rzp_id')?$('rzp_id').value.trim():'';
   const rzpSec=$('rzp_sec')?$('rzp_sec').value.trim():'';
   try{await api('/local/settings',{
-    name:$('shopname').value.trim()||S.cfg.shop.name,upi,ownerName:$('owner').value.trim(),phone:$('phone').value.trim(),mode:document.querySelector('input[name=mode]:checked').value,
+    mode:document.querySelector('input[name=mode]:checked').value,
     rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
     defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
     slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value},
@@ -172,6 +167,6 @@ $('logout').onclick=async()=>{if(confirm('Remove this key from this PC?')){await
 function tick(){if(!S||!S.activated)return;let d=S.cfg.expiresAt-Date.now();if(d<=0){$('cd').textContent='Expired';return}
   const D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4),X=Math.floor(d%6e4/1e3),p=n=>String(n).padStart(2,'0');
   $('cd').textContent=(D?D+'d ':'')+p(H)+'h '+p(M)+'m '+p(X)+'s'}
-async function boot(){await load();if(S.activated){await fillPrinters();fillSettings();setTab(S.cfg.shop.upi?'2':'1')}}
+async function boot(){await load();if(S.activated){await fillPrinters();fillSettings();setTab('2')}}
 boot();setInterval(tick,1000);setInterval(()=>load().catch(()=>{}),5000);
 </script></body></html>

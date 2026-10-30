@@ -620,7 +620,8 @@ http.createServer(async(req,res)=>{
       if((r=p.match(/^\/api\/shop\/(\w+)\/jobs$/))&&m==='POST'){
         const s=db.shops.find(x=>x.id===r[1]);
         if(!s||!shopActive(s))return J({error:'This shop is offline right now.'},400);
-        if(!s.upi)return J({error:'The shop has not set a UPI ID yet.'},400);
+        const shopKeys=getShopRzpKeys(s);
+        if(!s.upi&&!shopKeys&&!RZP_ON)return J({error:'The shop has not configured payments yet.'},400);
         const buf=Buffer.from(b.data||'','base64');
         if(buf.slice(0,4).toString()!=='%PDF')return J({error:'Only PDF files can be printed.'},400);
         const o=s.mode==='locked'?{...s.defaults}:{color:b.options?.color==='col'?'col':'bw',copies:Math.min(99,Math.max(1,parseInt(b.options?.copies)||1)),duplex:!!b.options?.duplex,range:/^[0-9,\-\s]*$/.test(b.options?.range||'')?(b.options.range||''):''};
