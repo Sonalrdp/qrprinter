@@ -9,6 +9,11 @@ using System.Windows.Forms;
 public class PrintQRApp {
     [STAThread]
     public static void Main(string[] args) {
+        try {
+            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+        } catch {}
+
         // Determine installation / application directory
         string appDir = AppDomain.CurrentDomain.BaseDirectory;
         if (!File.Exists(Path.Combine(appDir, "agent.js"))) {
@@ -220,8 +225,10 @@ public class PrintQRApp {
 
             string checkUrl = serverUrl.TrimEnd('/') + "/api/agent/version";
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(checkUrl);
-            req.Timeout = 2500;
-            req.ReadWriteTimeout = 2500;
+            req.Headers.Add("ngrok-skip-browser-warning", "true");
+            req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrintQR-App";
+            req.Timeout = 3000;
+            req.ReadWriteTimeout = 3000;
             string json = "";
             using (WebResponse resp = req.GetResponse())
             using (StreamReader sr = new StreamReader(resp.GetResponseStream())) {
@@ -235,6 +242,8 @@ public class PrintQRApp {
             if (!string.IsNullOrEmpty(remoteVer) && remoteVer != localVersion) {
                 string tempZip = Path.Combine(Path.GetTempPath(), "pqr_update_" + Guid.NewGuid().ToString("N") + ".zip");
                 using (WebClient wc = new WebClient()) {
+                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrintQR-App");
+                    wc.Headers.Add("ngrok-skip-browser-warning", "true");
                     string fullDlUrl = dlPath.StartsWith("http") ? dlPath : (serverUrl.TrimEnd('/') + dlPath);
                     wc.DownloadFile(fullDlUrl, tempZip);
                 }

@@ -23,12 +23,21 @@ public class PrintQRSetup : Form {
     private bool isInstalled = false;
 
     public PrintQRSetup() {
+        try {
+            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+        } catch {}
         InitializeUI();
         LoadConfiguredServerUrl();
     }
 
     [STAThread]
     public static void Main(string[] args) {
+        try {
+            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+        } catch {}
+
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
@@ -229,8 +238,31 @@ public class PrintQRSetup : Form {
             string zipUrl = serverUrl.TrimEnd('/') + "/downloads/PrintQR-Agent.zip";
             string tempZip = Path.Combine(Path.GetTempPath(), "PrintQR_Agent_Setup_" + Guid.NewGuid().ToString("N") + ".zip");
 
-            using (WebClient wc = new WebClient()) {
-                wc.DownloadFile(zipUrl, tempZip);
+            bool downloaded = false;
+            try {
+                using (WebClient wc = new WebClient()) {
+                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PrintQR-Installer");
+                    wc.Headers.Add("ngrok-skip-browser-warning", "true");
+                    wc.DownloadFile(zipUrl, tempZip);
+                    downloaded = true;
+                }
+            } catch (Exception dlEx) {
+                // Check if local PrintQR-Agent.zip is available next to setup exe or in workspace
+                string[] fallbacks = new string[] {
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PrintQR-Agent.zip"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "downloads", "PrintQR-Agent.zip"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "server", "public", "downloads", "PrintQR-Agent.zip")
+                };
+                foreach (string fb in fallbacks) {
+                    if (File.Exists(fb)) {
+                        File.Copy(fb, tempZip, true);
+                        downloaded = true;
+                        break;
+                    }
+                }
+                if (!downloaded) {
+                    throw dlEx;
+                }
             }
 
             // 4. Extract into C:\Program Files\PrintQR-Agent
