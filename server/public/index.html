@@ -1184,7 +1184,7 @@ async function cust(sid){
   const root=$('v-cust');let shop;
   try{shop=await api('/api/shop/'+sid)}catch(e){root.innerHTML='<h1>Shop not found</h1><p class="sub">Check the QR code on the counter and scan again.</p>';return}
   if(!shop.active){root.innerHTML='<h1>'+esc(shop.name)+'</h1><p class="sub">Printing is switched off at this shop right now. Please ask at the counter.</p>';return}
-  const locked=shop.mode==='locked';let st={b64:null,name:'',pages:0,o:locked?{...shop.defaults}:{color:'bw',copies:1,duplex:false,range:''}};
+  const locked=shop.mode==='locked';let st={b64:null,name:'',pages:0,textPages:0,imagePages:0,pageTypes:[],o:locked?{...shop.defaults}:{color:'bw',copies:1,duplex:false,range:''}};
   root.innerHTML='<h1>'+esc(shop.name)+'</h1><p class="sub">Upload your file, pay with UPI, and it prints here.</p>'
    +'<label class="drop" id="drop"><input type="file" id="file" accept="application/pdf,image/*"><b id="dt">Choose a PDF or photo</b><br><small id="ds">Tap to upload</small></label><div class="err" id="ce"></div>'
    +'<div class="cbox" id="cb" hidden>'+(locked?'<div class="lockedbox" id="lk"></div>':
@@ -1192,50 +1192,112 @@ async function cust(sid){
    +'<label for="cp">Copies</label><input id="cp" type="number" min="1" max="99" value="1">'
    +'<label>Sides</label><div class="seg" id="sd"><button type="button" aria-pressed="true" data-v="0">One side</button><button type="button" aria-pressed="false" data-v="1">Both sides</button></div>'
    +'<label for="rg">Pages (leave blank for all)</label><input id="rg" placeholder="e.g. 1-3,5">')
+   +'<div id="breakdown_box" style="margin:1rem 0;padding:.75rem 1rem;background:#F8F9F6;border:1.5px solid var(--line);border-radius:9px;font-size:.88rem"></div>'
    +'<button class="btn" id="pay" type="button"></button></div><div id="stt"></div>';
-  const price=()=>{const tot=st.pages;let n=tot;if(st.o.range){const s=new Set();st.o.range.split(',').forEach(p=>{const m=p.trim().match(/^(\d+)(?:-(\d+))?$/);if(m){for(let i=+m[1];i<=Math.min(+(m[2]||m[1]),tot);i++)if(i>0)s.add(i)}});if(s.size)n=s.size}
-    return {n,amt:Math.round(n*st.o.copies*(st.o.color==='col'?shop.rates.color:shop.rates.bw)*100)/100}};
-  const upd=()=>{const p=price();$('pay').textContent='Pay \u20B9'+p.amt+' with UPI';
-    if(locked)$('lk').innerHTML='Set by the shop: <b>'+(st.o.color==='col'?'colour':'black &amp; white')+'</b>, '+st.o.copies+' '+(st.o.copies>1?'copies':'copy')+', '+(st.o.duplex?'both sides':'one side')+(st.o.range?', pages '+esc(st.o.range):', all pages')+'. '+p.n+' page'+(p.n>1?'s':'')+' in total.'}
+  const price=()=>{
+    const tot=st.pages;
+    const selectedPages=[];
+    if(st.o.range){
+      const s=new Set();
+      st.o.range.split(',').forEach(p=>{
+        const m=p.trim().match(/^(\d+)(?:-(\d+))?$/);
+        if(m){for(let i=+m[1];i<=Math.min(+(m[2]||m[1]),tot);i++)if(i>0)s.add(i)}
+      });
+      selectedPages.push(...Array.from(s).sort((a,b)=>a-b));
+    } else {
+      for(let i=1;i<=tot;i++)selectedPages.push(i);
+    }
+    const n=selectedPages.length||tot;
+    let textCount=0, imageCount=0;
+    selectedPages.forEach(pNum=>{
+      const type=(st.pageTypes&&st.pageTypes[pNum-1])||(st.o.color==='col'?'image':'text');
+      if(type==='image')imageCount++; else textCount++;
+    });
+    const rateText=Number(shop.rates?.text||shop.rates?.bw||2);
+    const rateImage=Number(shop.rates?.image||shop.rates?.color||10);
+    const baseAmt=(textCount*rateText)+(imageCount*rateImage);
+    const amt=Math.round(baseAmt*st.o.copies*100)/100;
+    return {n,textCount,imageCount,rateText,rateImage,amt};
+  };
+  const upd=()=>{
+    const p=price();
+    $('pay').textContent='Pay \u20B9'+p.amt+' with UPI';
+    if($('breakdown_box')){
+      let bdText = p.n+' page'+(p.n>1?'s':'')+': ';
+      if(p.textCount && p.imageCount){
+        bdText += '<b>'+p.textCount+' Text</b> (\u20B9'+(p.textCount*p.rateText)+') + <b>'+p.imageCount+' Image/Photo</b> (\u20B9'+(p.imageCount*p.rateImage)+')';
+      } else if(p.imageCount){
+        bdText += '<b>'+p.imageCount+' Image/Photo</b> page'+(p.imageCount>1?'s':'')+' (\u20B9'+p.rateImage+'/pg)';
+      } else {
+        bdText += '<b>'+p.textCount+' Text</b> page'+(p.textCount>1?'s':'')+' (\u20B9'+p.rateText+'/pg)';
+      }
+      if(st.o.copies>1) bdText += ' &times; '+st.o.copies+' copies';
+      $('breakdown_box').innerHTML = bdText;
+    }
+    if(locked)$('lk').innerHTML='Set by the shop: <b>'+(st.o.color==='col'?'colour':'black &amp; white')+'</b>, '+st.o.copies+' '+(st.o.copies>1?'copies':'copy')+', '+(st.o.duplex?'both sides':'one side')+(st.o.range?', pages '+esc(st.o.range):', all pages')+'. '+p.n+' page'+(p.n>1?'s':'')+' in total.';
+  };
   if(!locked){
     const seg=(id,fn)=>$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{$(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');fn(b.dataset.v);upd()});
     seg('sc',v=>st.o.color=v);seg('sd',v=>st.o.duplex=v==='1');
     $('cp').oninput=e=>{st.o.copies=Math.min(99,Math.max(1,parseInt(e.target.value)||1));upd()};$('rg').oninput=e=>{st.o.range=e.target.value.replace(/[^0-9,\-\s]/g,'');upd()}}
   const b64=buf=>{let s='',u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
-  $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('ce').textContent='';$('ds').textContent='Reading file\u2026';
+  $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('ce').textContent='';$('ds').textContent='Analyzing page contents\u2026';
     try{let buf;
-      if(f.type==='application/pdf'){await load('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        buf=await f.arrayBuffer();st.pages=(await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))}).promise).numPages}
-      else if(f.type.startsWith('image/')){await load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      if(f.type==='application/pdf'){
+        await load('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        buf=await f.arrayBuffer();
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+        st.pages=pdf.numPages;
+        st.pageTypes=[];
+        const imgOps=[pdfjsLib.OPS.paintImageXObject, pdfjsLib.OPS.paintInlineImageXObject, pdfjsLib.OPS.paintImageMaskXObject];
+        for(let pNum=1;pNum<=pdf.numPages;pNum++){
+          const pg=await pdf.getPage(pNum);
+          const ops=await pg.getOperatorList();
+          let hasImg=false;
+          for(let i=0;i<ops.fnArray.length;i++){
+            if(imgOps.includes(ops.fnArray[i])){hasImg=true;break;}
+          }
+          st.pageTypes.push(hasImg?'image':'text');
+        }
+      }
+      else if(f.type.startsWith('image/')){
+        await load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
         const img=new Image();img.src=URL.createObjectURL(f);await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0);
-        const d=new jspdf.jsPDF({unit:'mm',format:'a4'}),W=210,H=297,r=Math.min((W-20)/c.width,(H-20)/c.height),w=c.width*r,h=c.height*r;d.addImage(c.toDataURL('image/jpeg',.92),'JPEG',(W-w)/2,(H-h)/2,w,h);buf=d.output('arraybuffer');st.pages=1}
+        const d=new jspdf.jsPDF({unit:'mm',format:'a4'}),W=210,H=297,r=Math.min((W-20)/c.width,(H-20)/c.height),w=c.width*r,h=c.height*r;d.addImage(c.toDataURL('image/jpeg',.92),'JPEG',(W-w)/2,(H-h)/2,w,h);buf=d.output('arraybuffer');
+        st.pages=1;
+        st.pageTypes=['image'];
+      }
       else throw new Error('Only PDF files and photos can be printed. Save Word files as PDF first.');
       st.b64=b64(buf);st.name=f.name.replace(/\.\w+$/,'')+'.pdf';$('dt').textContent=f.name;$('ds').textContent=st.pages+' page'+(st.pages>1?'s':'')+' \u2013 tap to change';$('cb').hidden=false;upd()}
     catch(x){$('ce').textContent=x.message;$('ds').textContent='Tap to upload'}};
   $('pay').onclick=async()=>{$('pay').disabled=true;$('ce').textContent='';
-    try{const j=await api('/api/shop/'+sid+'/jobs',{filename:st.name,data:st.b64,pages:st.pages,options:st.o});
+    try{
+      const pInfo=price();
+      const j=await api('/api/shop/'+sid+'/jobs',{filename:st.name,data:st.b64,pages:pInfo.n,textPages:pInfo.textCount,imagePages:pInfo.imageCount,options:st.o});
       const cfg=await api('/api/config?shopId='+sid);
+      const tokenBadge='<div style="font-size:1.25rem;font-weight:700;background:#E8EAE4;padding:.6rem 1rem;border-radius:10px;margin-bottom:1rem;color:var(--ink)">Token #'+(j.token||101)+'</div>';
       if(cfg.keyId){ /* real payment through Razorpay: money goes to the shop's UPI */
         $('cb').hidden=true;$('drop').hidden=true;
         const rp=await api('/api/jobs/'+j.id+'/pay',{});await load('https://checkout.razorpay.com/v1/checkout.js');
-        $('stt').innerHTML='<div class="status" id="ps">Waiting for payment\u2026</div>';
+        $('stt').innerHTML='<div class="status" id="ps">'+tokenBadge+'Waiting for payment\u2026</div>';
         await new Promise((ok,no)=>rzpPay(rp,async x=>{try{await api('/api/jobs/'+j.id+'/verify',x);ok()}catch(e){no(e)}},no,'Print '+j.id));
-        $('ps').textContent='Payment received. Sending to the printer\u2026';
+        $('ps').innerHTML=tokenBadge+'Payment received! Notifying shopkeeper to print\u2026';
         const t=setInterval(async()=>{const s=await api('/api/jobs/'+j.id);
-          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML='<b>Done.</b> Collect your pages at the counter.'}
-          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML='<b>The printer had a problem.</b> Please tell the shopkeeper.'}
-          else if(s.status==='printing')$('ps').textContent='Printing now\u2026'},2000);
+          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML=tokenBadge+'<b>Done!</b> Collect your pages at the counter.'}
+          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML=tokenBadge+'<b>The printer had a problem.</b> Please tell the shopkeeper.'}
+          else if(s.status==='printing')$('ps').innerHTML=tokenBadge+'Printing now\u2026'},2000);
         return;
       }
-      const upi='upi://pay?pa='+encodeURIComponent(shop.upi)+'&pn='+encodeURIComponent(shop.name)+'&am='+j.amount+'&cu=INR&tn='+encodeURIComponent('Print '+j.id);
+      const upi='upi://pay?pa='+encodeURIComponent(shop.upi)+'&pn='+encodeURIComponent(shop.name)+'&am='+j.amount+'&cu=INR&tn='+encodeURIComponent('Print Token '+(j.token||101));
       $('cb').hidden=true;$('drop').hidden=true;
-      $('stt').innerHTML='<div class="status"><p><b>Pay \u20B9'+j.amount+' to '+esc(shop.name)+'</b></p><p style="margin:.6rem 0 1rem">Your UPI app should open. If it did not, tap the button.</p><a class="btn" style="display:block;text-align:center;margin-bottom:.7rem" href="'+upi+'">Open UPI app</a><button class="btn ghost" id="paid" style="width:100%">I have paid</button></div>';
+      $('stt').innerHTML='<div class="status">'+tokenBadge+'<p><b>Pay \u20B9'+j.amount+' to '+esc(shop.name)+'</b></p><p style="margin:.6rem 0 1rem">Your UPI app should open. If it did not, tap the button.</p><a class="btn" style="display:block;text-align:center;margin-bottom:.7rem" href="'+upi+'">Open UPI app</a><button class="btn ghost" id="paid" style="width:100%">I have paid</button></div>';
       location.href=upi;
-      $('paid').onclick=async()=>{await api('/api/jobs/'+j.id+'/pay',{});const box=$('stt');box.innerHTML='<div class="status" id="ps">Payment received. Sending to the printer\u2026</div>';
+      $('paid').onclick=async()=>{await api('/api/jobs/'+j.id+'/pay',{});const box=$('stt');box.innerHTML='<div class="status" id="ps">'+tokenBadge+'Payment received! Notifying shopkeeper to print\u2026</div>';
         const t=setInterval(async()=>{const s=await api('/api/jobs/'+j.id);
-          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML='<b>Done.</b> Collect your pages at the counter.'}
-          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML='<b>The printer had a problem.</b> Please tell the shopkeeper.'}
-          else if(s.status==='printing')$('ps').textContent='Printing now\u2026'},2000)}
+          if(s.status==='printed'){clearInterval(t);$('ps').innerHTML=tokenBadge+'<b>Done!</b> Collect your pages at the counter.'}
+          else if(s.status==='failed'){clearInterval(t);$('ps').innerHTML=tokenBadge+'<b>The printer had a problem.</b> Please tell the shopkeeper.'}
+          else if(s.status==='printing')$('ps').innerHTML=tokenBadge+'Printing now\u2026'},2000)}
     }catch(x){$('ce').textContent=x.message;$('pay').disabled=false}};
 }
 /* ---- admin ---- */

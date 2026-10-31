@@ -127,8 +127,25 @@ if (ADMIN_EMAIL && ADMIN_PASSWORD) {
 const body=req=>new Promise((ok,no)=>{let c=[],n=0;req.on('data',d=>{n+=d.length;if(n>40e6){no(new Error('File too large'));req.destroy();return}c.push(d)});req.on('end',()=>{try{ok(JSON.parse(Buffer.concat(c).toString()||'{}'))}catch(e){ok({})}})});
 const live=k=>k&&k.expiresAt&&Date.now()<k.expiresAt;
 const shopActive=s=>live(db.keys.find(k=>k.key===s.keyId));
-const pub=s=>({id:s.id,name:s.name,mode:s.mode,defaults:s.defaults,rates:s.rates,upi:s.upi,active:shopActive(s),hasCustomRzp:!!(s.rzpKeyId&&s.rzpKeySecret)});
-const full=s=>({...pub(s),slots:s.slots,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!(s.linkedAccountId||(s.rzpKeyId&&s.rzpKeySecret)),rzpKeyId:s.rzpKeyId||'',hasRzpSecret:!!s.rzpKeySecret,rzpWebhookSecret:s.rzpWebhookSecret||''});
+const pub=s=>({
+  id:s.id,
+  name:s.name,
+  mode:s.mode,
+  defaults:s.defaults,
+  rates:{
+    bw:(s.rates&&s.rates.bw)||2,
+    color:(s.rates&&s.rates.color)||10,
+    text:(s.rates&&(s.rates.text||s.rates.bw))||2,
+    image:(s.rates&&(s.rates.image||s.rates.color))||10,
+    ...(s.rates||{})
+  },
+  printers:s.printers||[],
+  autoPrintMinutes:s.autoPrintMinutes||5,
+  upi:s.upi,
+  active:shopActive(s),
+  hasCustomRzp:!!(s.rzpKeyId&&s.rzpKeySecret)
+});
+const full=s=>({...pub(s),slots:s.slots,printers:s.printers||[],autoPrintMinutes:s.autoPrintMinutes||5,ownerName:s.ownerName||'',phone:s.phone||'',payoutReady:!!(s.linkedAccountId||(s.rzpKeyId&&s.rzpKeySecret)),rzpKeyId:s.rzpKeyId||'',hasRzpSecret:!!s.rzpKeySecret,rzpWebhookSecret:s.rzpWebhookSecret||''});
 function newKey(userId,plan,price,extra){
   const k={key:'PQR-'+[0,1,2].map(()=>rid(2).toUpperCase()).join('-'),userId,plan,price,createdAt:Date.now(),...extra};
   db.keys.push(k);
@@ -614,9 +631,12 @@ http.createServer(async(req,res)=>{
           const sh=myShops.find(s=>s.id===j.shopId);
           return {
             id:j.id,
+            token:j.token||101,
             shopName:sh?sh.name:'',
             filename:j.filename,
             pages:j.pages,
+            textPages:j.textPages||0,
+            imagePages:j.imagePages||0,
             copies:(j.options&&j.options.copies)||1,
             color:(j.options&&j.options.color)||'bw',
             duplex:!!(j.options&&j.options.duplex),
@@ -646,7 +666,7 @@ http.createServer(async(req,res)=>{
       }
       if(p==='/api/agent/settings'&&m==='POST'){
         if(!ashop)return J({error:'Key not valid'},401);
-        ['name','mode','upi','rates','defaults','slots','ownerName','phone','rzpKeyId','rzpKeySecret','rzpWebhookSecret'].forEach(f=>{if(b[f]!==undefined)ashop[f]=b[f]});
+        ['name','mode','upi','rates','defaults','slots','printers','autoPrintMinutes','ownerName','phone','rzpKeyId','rzpKeySecret','rzpWebhookSecret'].forEach(f=>{if(b[f]!==undefined)ashop[f]=b[f]});
         const kk=db.keys.find(x=>x.key===ashop.keyId),own=kk&&db.users.find(x=>x.id===kk.userId);
         if(own){
           if(b.rzpKeyId)own.rzpKeyId=b.rzpKeyId;
@@ -691,8 +711,11 @@ http.createServer(async(req,res)=>{
         if(!ashop)return J({error:'Key not valid'},401);
         const jobs=db.jobs.filter(j=>j.shopId===ashop.id).slice(-500).reverse().map(j=>({
           id:j.id,
+          token:j.token||101,
           filename:j.filename,
           pages:j.pages,
+          textPages:j.textPages||0,
+          imagePages:j.imagePages||0,
           copies:(j.options&&j.options.copies)||1,
           color:(j.options&&j.options.color)||'bw',
           duplex:!!(j.options&&j.options.duplex),
@@ -751,10 +774,21 @@ http.createServer(async(req,res)=>{
         if(buf.slice(0,4).toString()!=='%PDF')return J({error:'Only PDF files can be printed.'},400);
         const o=s.mode==='locked'?{...s.defaults}:{color:b.options?.color==='col'?'col':'bw',copies:Math.min(99,Math.max(1,parseInt(b.options?.copies)||1)),duplex:!!b.options?.duplex,range:/^[0-9,\-\s]*$/.test(b.options?.range||'')?(b.options.range||''):''};
         const total=Math.max(1,parseInt(b.pages)||1),n=count(o.range,total);
-        const j={id:rid(5),shopId:s.id,filename:String(b.filename||'file.pdf').slice(0,80),options:o,pages:n,amount:n*o.copies*(o.color==='col'?s.rates.color:s.rates.bw),status:'created',createdAt:Date.now()};
+        const rateText = Number((s.rates && (s.rates.text || s.rates.bw)) || 2);
+        const rateImage = Number((s.rates && (s.rates.image || s.rates.color)) || 10);
+        let textPages = b.textPages !== undefined ? Math.max(0, parseInt(b.textPages) || 0) : 0;
+        let imagePages = b.imagePages !== undefined ? Math.max(0, parseInt(b.imagePages) || 0) : 0;
+        if(textPages + imagePages === 0) {
+          if(o.color === 'col') { imagePages = n; textPages = 0; }
+          else { textPages = n; imagePages = 0; }
+        }
+        const calculatedAmount = Math.round(((textPages * rateText) + (imagePages * rateImage)) * o.copies * 100) / 100;
+        const shopJobs = db.jobs.filter(x => x.shopId === s.id);
+        const token = 101 + (shopJobs.length % 899);
+        const j={id:rid(5),token,shopId:s.id,filename:String(b.filename||'file.pdf').slice(0,80),options:o,pages:n,textPages,imagePages,amount:calculatedAmount,status:'created',createdAt:Date.now()};
         fs.writeFileSync(path.join(UP,j.id+'.pdf'),buf);db.jobs.push(j);save();
         syncToGoogleScript('add_print_job',{job:{...j,shopName:s.name,color:o.color,copies:o.copies}});
-        return J({id:j.id,amount:j.amount,pages:n});
+        return J({id:j.id,token:j.token,amount:j.amount,pages:n,textPages,imagePages});
       }
       if((r=p.match(/^\/api\/jobs\/(\w+)$/))){const j=db.jobs.find(x=>x.id===r[1]);return j?J({status:j.status,amount:j.amount}):J({error:'No job'},404)}
       if((r=p.match(/^\/api\/jobs\/(\w+)\/pay$/))&&m==='POST'){

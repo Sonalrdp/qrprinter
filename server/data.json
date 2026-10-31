@@ -4,10 +4,13 @@
    "id": "4ff9dea99577",
    "name": "Admin",
    "email": "admin@printqr.local",
-   "salt": "d8bc13785437d8e7",
-   "hash": "0e9b61970e7a384151d8a669f773363a73197c6fed151232d742be2a199fbeb5",
+   "salt": "809374260751ea57",
+   "hash": "a9f6d389eb893dda424980a0fb9ad2e426b733dc1eabe6a9b86aa66964fa2db7",
    "demoUsed": true,
-   "isAdmin": true
+   "isAdmin": true,
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
   },
   {
    "id": "9e685457a630",
@@ -30,6 +33,42 @@
    "rzpKeyId": "rzp_test_UserKey123456",
    "rzpKeySecret": "UserSecretKey789abc",
    "rzpWebhookSecret": "UserWhSecret999"
+  },
+  {
+   "id": "acd971a0401b",
+   "name": "Ankit Singh",
+   "email": "as7375658@gmail.com",
+   "phone": "+919135779897",
+   "salt": "997a881a509efffd",
+   "hash": "4a7d315595f7955b891e63b153b2620e3143197557d4bd5ee901fae6d8455a04",
+   "demoUsed": true,
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
+  },
+  {
+   "id": "45291f14b929",
+   "name": "Sonal",
+   "email": "hhtpubgclub@gmail.com",
+   "phone": 8235066919,
+   "salt": "88fd0660cc9291ee",
+   "hash": "1a87a6c8140a6874cc0130b976994f8b8a3a5a78d06c7d1343e7c85342d3ba3e",
+   "demoUsed": false,
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
+  },
+  {
+   "id": "45291f14b929",
+   "name": "Sonal",
+   "email": "hhtpubgclub@gmail.com",
+   "phone": 8235066919,
+   "salt": "88fd0660cc9291ee",
+   "hash": "1a87a6c8140a6874cc0130b976994f8b8a3a5a78d06c7d1343e7c85342d3ba3e",
+   "demoUsed": false,
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
   }
  ],
  "sessions": {
@@ -43,7 +82,16 @@
   "53c8f70f0452e150e56d4899c9bfcf4562efffa511a98582": "4ff9dea99577",
   "9aefdd36075e831a07a36760f05ffe297a51348280f17270": "4ff9dea99577",
   "a97ea4ea421fcdd498214ae3bced7393eedd5ed007ce2326": "4ff9dea99577",
-  "e2d96468d93c33d1b7a17613d491529796696d7bbd5fa49a": "4ff9dea99577"
+  "e2d96468d93c33d1b7a17613d491529796696d7bbd5fa49a": "4ff9dea99577",
+  "04989d90707a89cd9f25a190bc2715de8ed5cb592e24aba4": "acd971a0401b",
+  "80b33c647fff9dfd23d43705dd609e72ffde96c9dfe3d921": "4ff9dea99577",
+  "93a12b5784e7fbe6dd5b60939a39e50d564e1ce2ba9665aa": "4ff9dea99577",
+  "fb6aea5cd0db145caf6656e03e1e512422b79bed96c352b0": "acd971a0401b",
+  "53a09ad3f562936a7efff71a92149baf47c0e1f154fde22f": "45291f14b929",
+  "9c8109ccec1c28a209266582cb652677c630c2a2f8bbd1df": "45291f14b929",
+  "f50c0f0ee9f6e97ec7ef6433977fa237125df661713a0373": "4ff9dea99577",
+  "c53371cf42cf06a6b44ff625539f2eca240d68a661864530": "4ff9dea99577",
+  "5a3e052973cad9d061d0ed9656519b18fae9182acd2b05b0": "4ff9dea99577"
  },
  "keys": [
   {
@@ -74,7 +122,7 @@
    "price": 0,
    "createdAt": 1793397001511,
    "activatedAt": 1793397001514,
-   "expiresAt": 1793569801514,
+   "expiresAt": 1793438366103,
    "shopId": "8fff086e"
   },
   {
@@ -84,8 +132,29 @@
    "price": 0,
    "createdAt": 1793397733285,
    "activatedAt": 1793397733290,
-   "expiresAt": 1793570533290,
+   "expiresAt": 1793438369729,
    "shopId": "7f7e96a2"
+  },
+  {
+   "key": "PQR-39E1-55C2-D214",
+   "userId": "acd971a0401b",
+   "plan": "demo",
+   "price": 0,
+   "createdAt": 1793404192797,
+   "activatedAt": 1793404281288,
+   "expiresAt": 1793577081288,
+   "shopId": "54d2dfab"
+  },
+  {
+   "key": "PQR-AB14-46F8-1797",
+   "userId": "4ff9dea99577",
+   "plan": "12m",
+   "price": 0,
+   "createdAt": 1793405118453,
+   "extraMs": 31536000000,
+   "activatedAt": 1793405118456,
+   "expiresAt": 1856477118456,
+   "shopId": "3d37024b"
   }
  ],
  "shops": [
@@ -170,6 +239,58 @@
    "rzpWebhookSecret": "UserWhSecret999",
    "ownerName": "Rohan Sharma",
    "phone": "9876543210"
+  },
+  {
+   "id": "54d2dfab",
+   "keyId": "PQR-39E1-55C2-D214",
+   "name": "Ankit Singh's shop",
+   "mode": "default",
+   "upi": "",
+   "rates": {
+    "bw": 2,
+    "color": 10
+   },
+   "defaults": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "slots": {
+    "bw": "Microsoft Print to PDF",
+    "color": "",
+    "duplex": "",
+    "photo": ""
+   },
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
+  },
+  {
+   "id": "3d37024b",
+   "keyId": "PQR-AB14-46F8-1797",
+   "name": "Admin's shop",
+   "mode": "default",
+   "upi": "",
+   "rates": {
+    "bw": 2,
+    "color": 10
+   },
+   "defaults": {
+    "color": "bw",
+    "copies": 1,
+    "duplex": false,
+    "range": ""
+   },
+   "slots": {
+    "bw": "",
+    "color": "",
+    "duplex": "",
+    "photo": ""
+   },
+   "rzpKeyId": "",
+   "rzpKeySecret": "",
+   "rzpWebhookSecret": ""
   }
  ],
  "jobs": [
@@ -238,6 +359,17 @@
    "status": "created",
    "createdAt": 1793390359647,
    "id": "order_TuFAFnVw0d2XIr"
+  },
+  {
+   "kind": "plan",
+   "userId": "45291f14b929",
+   "plan": "3m",
+   "amount": 29900,
+   "status": "created",
+   "createdAt": 1793437417591,
+   "id": "order_TuSWhySMZizQnR",
+   "rzpKeyId": "rzp_live_TuEdfVvJfJgdTd",
+   "rzpKeySecret": "LYhhO9wPNnSmgKuTKuZ3Cega"
   }
  ],
  "settings": {

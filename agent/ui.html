@@ -21,7 +21,7 @@ label{display:block;font-weight:600;margin:.9rem 0 .3rem}
 .who small,.kv small{display:block;color:var(--mute);font-size:.8rem;line-height:1.2}
 .kv b{font-size:1.3rem;font-variant-numeric:tabular-nums}
 .qrb{width:46px;height:46px;border-radius:10px;border:1.5px solid var(--ink);background:#fff;cursor:pointer;display:grid;place-items:center}.qrb:hover{background:var(--dim)}
-.main{max-width:920px;margin:0 auto;padding:1.6rem}
+.main{max-width:940px;margin:0 auto;padding:1.6rem}
 .tabs{display:flex;gap:.5rem;margin-bottom:1.4rem;flex-wrap:wrap}
 .tab{padding:.55rem 1.1rem;border-radius:999px;border:1.5px solid var(--ink);background:transparent;cursor:pointer}
 .tab[aria-selected=true]{background:var(--ink);color:#fff}
@@ -37,7 +37,7 @@ label{display:block;font-weight:600;margin:.9rem 0 .3rem}
 .log{margin-top:2.2rem;border-top:1px solid var(--line);padding-top:1rem;color:var(--mute);font-size:.88rem}
 .log div{padding:.15rem 0}
 dialog{border:0;border-radius:14px;padding:1.6rem;background:var(--paper);max-width:94vw}
-dialog::backdrop{background:rgba(24,27,38,.6)}
+dialog::backdrop{background:rgba(24,27,38,.65)}
 .sheet{width:min(340px,80vw);aspect-ratio:210/297;background:#fff;border:1px solid var(--line);margin:0 auto 1.2rem;padding:8%;display:flex;flex-direction:column;text-align:center}
 .sheet h3{font-size:1.7rem;line-height:1}.sheet small{color:var(--mute)}
 .sheet img{width:80%;margin:auto}.sheet b.h{font-size:1.3rem;line-height:1.1}.sheet b.h span{color:var(--mag)}
@@ -61,6 +61,20 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
 .kpi-card small{color:var(--mute);display:block;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 .kpi-card b{font-size:1.8rem;display:block;margin-top:.3rem;line-height:1.15}
 .kpi-card span{font-size:.8rem;color:var(--mute);display:block;margin-top:.25rem}
+
+/* Printer cards row & add card */
+.printer-cards-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1rem;margin-bottom:1.6rem}
+.printer-card{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.1rem;cursor:pointer;transition:all .15s;position:relative}
+.printer-card:hover{border-color:var(--ink)}
+.printer-card.sel{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink);background:#FAFBF8}
+.printer-card b{display:block;font-size:1.05rem;margin-bottom:.25rem}
+.printer-card span{display:block;color:var(--mute);font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.printer-card .card-rates{margin-top:.55rem;font-size:.8rem;color:var(--mag);font-weight:600}
+.printer-card.add-card{border:1.5px dashed var(--mute);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:115px;text-align:center;background:transparent}
+.printer-card.add-card:hover{border-color:var(--ink);background:#fff}
+.printer-card.add-card b{margin-bottom:0}
+
+#modal_print_confirm{width:min(490px,94vw);border-radius:16px;box-shadow:0 14px 36px rgba(0,0,0,0.22);padding:1.8rem;border:1.5px solid var(--ink)}
 
 @page{size:A4;margin:0}
 @media print{
@@ -93,7 +107,6 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
       <button class="tab" role="tab" data-t="0">Dashboard</button>
       <button class="tab" role="tab" data-t="4">Print jobs</button>
       <button class="tab" role="tab" data-t="1">Printers</button>
-      <button class="tab" role="tab" data-t="2">Page settings</button>
       <button class="tab" role="tab" data-t="3">Payment gateway</button>
     </div>
 
@@ -164,37 +177,70 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
       <div id="agent_ov_recent_jobs"></div>
     </div>
 
-    <!-- Panel 1: Printers -->
+    <!-- Panel 1: Printers & Settings (Unified 1 Tab) -->
     <div class="panel" id="p1">
-      <h2>Choose your printers</h2><p>Pick which printer handles each kind of job. Leave a slot empty if you don't have that printer.</p>
-      <div class="g2">
-        <div><label for="s_bw">Black &amp; white</label><select id="s_bw"></select></div>
-        <div><label for="s_color">Colour</label><select id="s_color"></select></div>
-        <div><label for="s_duplex">Both sides (duplex)</label><select id="s_duplex"></select></div>
-        <div><label for="s_photo">Photo</label><select id="s_photo"></select></div>
-      </div>
-      <div class="row"><button class="btn" data-go="2">Next: page settings</button><button class="btn ghost" id="refresh">Refresh printer list</button></div>
-    </div>
+      <h2>Printers &amp; Page Settings</h2>
+      <p>Configure printer hardware profiles, page content identification rates, and auto-print timeout.</p>
 
-    <!-- Panel 2: Page settings (Cleaned: no Razorpay fields here) -->
-    <div class="panel" id="p2">
-      <h2>Page settings</h2><p>Decide how much your customers can change.</p>
-      <div class="modes">
-        <label class="mode" id="m0"><input type="radio" name="mode" value="default"><b>Default</b><span>Customer picks pages, colour or black &amp; white, copies and sides on their phone.</span></label>
-        <label class="mode" id="m1"><input type="radio" name="mode" value="locked"><b>Shopper locked</b><span>You fix every setting below. Customer only uploads a file.</span></label>
+      <!-- Printer profile cards row -->
+      <div class="printer-cards-row" id="printer_cards_row"></div>
+
+      <!-- Selected printer settings form -->
+      <div id="printer_form_card" style="background:#fff;border:1.5px solid var(--ink);border-radius:14px;padding:1.6rem;margin-bottom:1.6rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:.8rem">
+          <div>
+            <h3 id="form_p_title" style="margin-bottom:.15rem">Printer Settings</h3>
+            <span id="form_p_sub" style="color:var(--mute);font-size:.85rem">Hardware and default configuration</span>
+          </div>
+          <button class="btn ghost" id="delete_printer_btn" style="color:#C5221F;border-color:#FCE8E6;padding:.4rem .9rem;font-size:.85rem" hidden>Delete profile</button>
+        </div>
+
+        <div class="g2" style="margin-bottom:1rem">
+          <div>
+            <label for="p_name">Profile Name</label>
+            <input id="p_name" placeholder="e.g. Black & white or Colour">
+          </div>
+          <div>
+            <label for="p_device">Hardware Printer Device</label>
+            <select id="p_device"></select>
+          </div>
+        </div>
+
+        <label style="margin-top:1.2rem">Customer Control Mode</label>
+        <div class="modes">
+          <label class="mode" id="pm0"><input type="radio" name="p_mode" value="default"><b>Default</b><span>Customer picks pages, colour or black &amp; white, copies and sides on phone.</span></label>
+          <label class="mode" id="pm1"><input type="radio" name="p_mode" value="locked"><b>Shopper locked</b><span>You fix every option below. Customer only uploads their document.</span></label>
+        </div>
+
+        <div class="g2" id="p_defs" style="margin-top:1rem">
+          <div><label for="p_def_color">Default Colour</label><select id="p_def_color"><option value="bw">Black &amp; white</option><option value="col">Colour</option></select></div>
+          <div><label for="p_def_copies">Default Copies</label><input id="p_def_copies" type="number" min="1" max="99" value="1"></div>
+          <div><label for="p_def_duplex">Default Sides</label><select id="p_def_duplex"><option value="0">One side</option><option value="1">Both sides (duplex)</option></select></div>
+          <div><label for="p_def_range">Default Pages (blank = all)</label><input id="p_def_range" placeholder="e.g. 1-3,5"></div>
+        </div>
+
+        <h3 style="margin-top:1.8rem;margin-bottom:.3rem">1. Page Content Identification &amp; Rates</h3>
+        <p style="color:var(--mute);font-size:.88rem;margin-bottom:1rem">Automatically identifies whether uploaded pages contain text or images/photos, and charges accurately.</p>
+        <div class="g2">
+          <div><label for="p_rate_text">Normal text page price (₹)</label><input id="p_rate_text" type="number" min="0" step="0.5" value="2"></div>
+          <div><label for="p_rate_image">Image / photo page price (₹)</label><input id="p_rate_image" type="number" min="0" step="0.5" value="10"></div>
+        </div>
+
+        <h3 style="margin-top:1.8rem;margin-bottom:.3rem">2. Shopkeeper Notification &amp; Auto-Print</h3>
+        <p style="color:var(--mute);font-size:.88rem;margin-bottom:1rem">When a customer pays, a notification pops up with their Token number so you can click Print. If not printed within this waiting time, it prints automatically.</p>
+        <div style="max-width:340px">
+          <label for="p_auto_print">Auto-print waiting time (minutes)</label>
+          <input id="p_auto_print" type="number" min="0" max="60" value="5">
+          <small style="color:var(--mute);display:block;margin-top:.3rem">Default: 5 minutes. Set to 0 to print immediately without waiting.</small>
+        </div>
+
+        <div class="row" style="margin-top:1.8rem;border-top:1px solid var(--line);padding-top:1.2rem">
+          <button class="btn" id="save_printer">Save printer settings</button>
+          <button class="btn ghost" id="refresh_printers_btn">Refresh printer list</button>
+          <span id="p_saved" class="ok"></span>
+          <span id="p_err" class="err"></span>
+        </div>
       </div>
-      <div class="g2" id="defs">
-        <div><label for="d_color">Colour</label><select id="d_color"><option value="bw">Black &amp; white</option><option value="col">Colour</option></select></div>
-        <div><label for="d_copies">Copies</label><input id="d_copies" type="number" min="1" max="99" value="1"></div>
-        <div><label for="d_duplex">Sides</label><select id="d_duplex"><option value="0">One side</option><option value="1">Both sides</option></select></div>
-        <div><label for="d_range">Pages (blank = all)</label><input id="d_range" placeholder="e.g. 1-3,5"></div>
-      </div>
-      <h3 style="margin-top:1.6rem">Print rates</h3>
-      <div class="g2">
-        <div><label for="r_bw">Price per page, black &amp; white (₹)</label><input id="r_bw" type="number" min="0" step="0.5"></div>
-        <div><label for="r_color">Price per page, colour (₹)</label><input id="r_color" type="number" min="0" step="0.5"></div>
-      </div>
-      <div class="row" style="margin-top:1.6rem"><button class="btn" id="save">Save page settings</button><span id="saved" class="ok"></span><span class="err" id="serr"></span></div>
     </div>
 
     <!-- Panel 3: Payment gateway (Fetched from website account with edit & reset) -->
@@ -219,7 +265,7 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
 
         <div style="margin-bottom:1.2rem">
           <label style="color:var(--mute);font-size:.85rem;display:block;margin-bottom:.25rem">WEBHOOK SECRET</label>
-          <code id="disp_rzp_wh" style="font-family:Consolas,monospace;font-size:.95rem;color:var(--ink);display:block">–</code>
+          <code id="disp_rzp_wh" style="font-family:Consolas,monospace;font-size:0.95rem;color:var(--ink);display:block">–</code>
         </div>
 
         <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--line)">
@@ -255,7 +301,7 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
       </div>
     </div>
 
-    <!-- Panel 4: Print jobs -->
+    <!-- Panel 4: Print jobs (2nd Tab position) -->
     <div class="panel" id="p4">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem">
         <div>
@@ -288,12 +334,56 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
   </div>
 </div>
 
+<!-- Standee QR Modal -->
 <dialog id="qm"><div class="sheet" id="sheet"><h3 id="q_shop"></h3><small>Print from your phone</small><img id="q_img" alt="QR code"><b class="h">Scan. Upload. Pay.<br><span>Prints right here.</span></b></div>
 <div class="acts"><button class="btn" id="pr">Print A4 page</button><button class="btn ghost" id="qc">Close</button></div></dialog>
 
+<!-- Shopkeeper Print Confirmation Popup Modal with 5-Minute Auto-Print Countdown -->
+<dialog id="modal_print_confirm">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem">
+    <h3 style="margin:0;font-size:1.35rem">🔔 New Print Job Received!</h3>
+    <span id="modal_countdown_badge" class="pill on" style="font-size:.85rem">⏱️ Auto-print: 05:00</span>
+  </div>
+  <div id="modal_token_banner" style="background:var(--ink);color:#fff;border-radius:12px;padding:1rem;text-align:center;font-size:2rem;font-weight:700;margin-bottom:1.2rem">Token #101</div>
+  <div style="background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:1rem;margin-bottom:1.4rem">
+    <div style="font-size:.82rem;color:var(--mute);margin-bottom:.2rem">DOCUMENT</div>
+    <code id="modal_filename" style="font-size:1rem;font-weight:600;display:block;margin-bottom:.8rem">document.pdf</code>
+    <div class="g2" style="font-size:.9rem">
+      <div><span style="color:var(--mute)">Pages:</span> <b id="modal_pages_info">1 pg</b></div>
+      <div><span style="color:var(--mute)">Amount:</span> <b id="modal_amount_info" style="color:#1F7A47">₹0</b></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:.8rem;align-items:center">
+    <button class="btn" id="btn_modal_print_now" style="flex:2;padding:.8rem 1.4rem;font-size:1.05rem">🖨️ Print Now</button>
+    <button class="btn ghost" id="btn_modal_cancel_job" style="flex:1;color:#C5221F;border-color:#FCE8E6">Reject / Cancel</button>
+  </div>
+</dialog>
+
 <script>
-const $=id=>document.getElementById(id);let S=null,printers=[],tab='0';
+const $=id=>document.getElementById(id);
+let S=null, hardwarePrinters=[], tab='0';
+let printerProfiles=[];
+let selectedProfileId='bw';
 const api=async(p,b)=>{const r=await fetch(p,b?{method:'POST',body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');return j};
+
+/* ---- Voice Announcement ---- */
+const spokenJobIds = new Set();
+function speakJob(token, amount) {
+  if (localStorage.getItem('pqr_voice_alert') === 'off') return;
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const text = `Order number ${token}. Amount of ${amount} rupees is successful. Ready for printing.`;
+      const ut = new SpeechSynthesisUtterance(text);
+      ut.rate = 0.95;
+      ut.pitch = 1.0;
+      ut.lang = 'en-IN';
+      window.speechSynthesis.speak(ut);
+    } catch(e) {
+      console.warn('Speech error', e);
+    }
+  }
+}
 
 async function load(){
   S=await api('/local/state');
@@ -314,65 +404,227 @@ function updateHardwarePrintersSummary(){
   if(slots.duplex) activeSlots.push('<b>Duplex:</b> ' + slots.duplex);
   if(slots.photo) activeSlots.push('<b>Photo:</b> ' + slots.photo);
   if($('agent_ov_printers_text')){
-    $('agent_ov_printers_text').innerHTML = activeSlots.length ? activeSlots.join(' &nbsp;|&nbsp; ') : '<span style="color:var(--mag)">No printers selected yet. Click Printers to assign slots.</span>';
+    $('agent_ov_printers_text').innerHTML = activeSlots.length ? activeSlots.join(' &nbsp;|&nbsp; ') : '<span style="color:var(--mag)">No printers selected yet. Click Printers tab to configure.</span>';
   }
 }
 
-async function fillPrinters(){
-  printers=await api('/local/printers');
-  ['bw','color','duplex','photo'].forEach(k=>{const el=$('s_'+k),cur=S.cfg.shop.slots[k]||'';
-    el.innerHTML='<option value="">Not set</option>'+printers.map(p=>'<option'+(p===cur?' selected':'')+'>'+p.replace(/</g,'&lt;')+'</option>').join('')});
-  updateHardwarePrintersSummary();
+/* ---- Unified Printers & Profiles Management ---- */
+async function fetchHardwarePrinters(){
+  hardwarePrinters = await api('/local/printers');
+  if(!Array.isArray(hardwarePrinters)) hardwarePrinters = [];
 }
 
-function fillSettings(){
-  const s=S.cfg.shop;document.querySelector('input[name=mode][value='+s.mode+']').checked=true;modeUI();
-  $('d_color').value=s.defaults.color;$('d_copies').value=s.defaults.copies;$('d_duplex').value=s.defaults.duplex?'1':'0';$('d_range').value=s.defaults.range||'';
-  $('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
+function initPrinterProfiles(){
+  if(S.cfg.shop.printers && Array.isArray(S.cfg.shop.printers) && S.cfg.shop.printers.length){
+    printerProfiles = JSON.parse(JSON.stringify(S.cfg.shop.printers));
+  } else {
+    // Default base profiles
+    printerProfiles = [
+      {
+        id: 'bw',
+        name: 'Black & white',
+        device: (S.cfg.shop.slots && S.cfg.shop.slots.bw) || '',
+        mode: S.cfg.shop.mode || 'default',
+        defaults: S.cfg.shop.defaults || { color: 'bw', copies: 1, duplex: false, range: '' },
+        rateText: (S.cfg.shop.rates && (S.cfg.shop.rates.text || S.cfg.shop.rates.bw)) || 2,
+        rateImage: (S.cfg.shop.rates && (S.cfg.shop.rates.image || S.cfg.shop.rates.color)) || 10,
+        autoPrintMinutes: S.cfg.shop.autoPrintMinutes || 5
+      },
+      {
+        id: 'color',
+        name: 'Colour',
+        device: (S.cfg.shop.slots && S.cfg.shop.slots.color) || '',
+        mode: S.cfg.shop.mode || 'default',
+        defaults: { color: 'col', copies: 1, duplex: false, range: '' },
+        rateText: (S.cfg.shop.rates && (S.cfg.shop.rates.text || S.cfg.shop.rates.bw)) || 2,
+        rateImage: (S.cfg.shop.rates && (S.cfg.shop.rates.image || S.cfg.shop.rates.color)) || 10,
+        autoPrintMinutes: S.cfg.shop.autoPrintMinutes || 5
+      }
+    ];
+  }
+  if(!printerProfiles.find(x => x.id === selectedProfileId)) {
+    selectedProfileId = printerProfiles[0]?.id || 'bw';
+  }
 }
 
-function modeUI(){const v=document.querySelector('input[name=mode]:checked').value;$('m0').classList.toggle('sel',v==='default');$('m1').classList.toggle('sel',v==='locked')}
+function renderPrinterCards(){
+  const row = $('printer_cards_row');
+  if(!row) return;
+  row.innerHTML = printerProfiles.map(p => {
+    const isSel = p.id === selectedProfileId;
+    return '<div class="printer-card' + (isSel ? ' sel' : '') + '" data-pid="' + p.id + '">'
+      + '<b>' + p.name.replace(/</g,'&lt;') + '</b>'
+      + '<span>' + (p.device ? p.device.replace(/</g,'&lt;') : '<i style="color:var(--mute)">Not assigned</i>') + '</span>'
+      + '<div class="card-rates">Text ₹' + p.rateText + ' · Photo ₹' + p.rateImage + '</div>'
+      + '</div>';
+  }).join('') + '<div class="printer-card add-card" id="btn_add_printer_card"><span style="font-size:1.8rem;line-height:1;margin-bottom:0.2rem">+</span><b>Add printer</b><small style="color:var(--mute)">New profile</small></div>';
 
-function setTab(t){
-  tab=t;
-  ['0','1','2','3','4'].forEach(x=>{
-    if($('p'+x))$('p'+x).classList.toggle('on',x===t);
-    const tb=document.querySelector('.tab[data-t="'+x+'"]');
-    if(tb)tb.setAttribute('aria-selected',x===t);
+  row.querySelectorAll('.printer-card:not(.add-card)').forEach(c => {
+    c.onclick = () => {
+      selectedProfileId = c.dataset.pid;
+      renderPrinterCards();
+      fillPrinterForm();
+    };
   });
-  if(t==='0'||t==='4')fetchJobs();
-  if(t==='3')loadRzp();
+  const addBtn = $('btn_add_printer_card');
+  if(addBtn) {
+    addBtn.onclick = () => {
+      const pName = prompt('Enter a name for this new printer profile:', 'New Printer');
+      if(!pName || !pName.trim()) return;
+      const newId = 'pr_' + Date.now().toString(36);
+      const newProf = {
+        id: newId,
+        name: pName.trim(),
+        device: '',
+        mode: 'default',
+        defaults: { color: 'bw', copies: 1, duplex: false, range: '' },
+        rateText: (S.cfg.shop.rates && (S.cfg.shop.rates.text || S.cfg.shop.rates.bw)) || 2,
+        rateImage: (S.cfg.shop.rates && (S.cfg.shop.rates.image || S.cfg.shop.rates.color)) || 10,
+        autoPrintMinutes: S.cfg.shop.autoPrintMinutes || 5
+      };
+      printerProfiles.push(newProf);
+      selectedProfileId = newId;
+      renderPrinterCards();
+      fillPrinterForm();
+    };
+  }
 }
 
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
-document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>setTab(b.dataset.go));
-document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=modeUI);
-$('refresh').onclick=fillPrinters;
+function fillPrinterForm(){
+  const prof = printerProfiles.find(x => x.id === selectedProfileId) || printerProfiles[0];
+  if(!prof) return;
 
-$('abtn').onclick=async()=>{
-  $('aerr').textContent='';
-  try{
-    await api('/local/activate',{serverUrl:$('srv').value.trim(),key:$('key').value.trim()});
-    await boot();
-  }catch(e){
-    $('aerr').textContent=e.message;
+  $('form_p_title').textContent = prof.name + ' Settings';
+  $('p_name').value = prof.name;
+
+  // Fill hardware device dropdown
+  const devSelect = $('p_device');
+  devSelect.innerHTML = '<option value="">(None / Not set)</option>' + hardwarePrinters.map(h => '<option value="' + h.replace(/"/g,'&quot;') + '"' + (h === prof.device ? ' selected' : '') + '>' + h.replace(/</g,'&lt;') + '</option>').join('');
+
+  // Mode UI
+  const isLocked = prof.mode === 'locked';
+  const mRadio = document.querySelector('input[name=p_mode][value=' + (isLocked ? 'locked' : 'default') + ']');
+  if(mRadio) mRadio.checked = true;
+  $('pm0').classList.toggle('sel', !isLocked);
+  $('pm1').classList.toggle('sel', isLocked);
+
+  // Defaults
+  $('p_def_color').value = prof.defaults?.color || 'bw';
+  $('p_def_copies').value = prof.defaults?.copies || 1;
+  $('p_def_duplex').value = prof.defaults?.duplex ? '1' : '0';
+  $('p_def_range').value = prof.defaults?.range || '';
+
+  // Rates
+  $('p_rate_text').value = prof.rateText !== undefined ? prof.rateText : 2;
+  $('p_rate_image').value = prof.rateImage !== undefined ? prof.rateImage : 10;
+
+  // Auto-print
+  $('p_auto_print').value = prof.autoPrintMinutes !== undefined ? prof.autoPrintMinutes : 5;
+
+  // Delete button visible only for custom profiles (not base bw or color)
+  const isBase = prof.id === 'bw' || prof.id === 'color';
+  $('delete_printer_btn').hidden = isBase;
+}
+
+document.querySelectorAll('input[name=p_mode]').forEach(r => {
+  r.onchange = () => {
+    const v = document.querySelector('input[name=p_mode]:checked').value;
+    $('pm0').classList.toggle('sel', v === 'default');
+    $('pm1').classList.toggle('sel', v === 'locked');
+  };
+});
+
+$('delete_printer_btn').onclick = () => {
+  if(!confirm('Delete this printer profile?')) return;
+  printerProfiles = printerProfiles.filter(x => x.id !== selectedProfileId);
+  selectedProfileId = printerProfiles[0]?.id || 'bw';
+  renderPrinterCards();
+  fillPrinterForm();
+};
+
+$('refresh_printers_btn').onclick = async () => {
+  await fetchHardwarePrinters();
+  fillPrinterForm();
+  updateHardwarePrintersSummary();
+};
+
+$('save_printer').onclick = async () => {
+  $('p_err').textContent = '';
+  $('p_saved').textContent = 'Saving...';
+  try {
+    const prof = printerProfiles.find(x => x.id === selectedProfileId);
+    if(prof) {
+      prof.name = $('p_name').value.trim() || prof.name;
+      prof.device = $('p_device').value;
+      prof.mode = document.querySelector('input[name=p_mode]:checked').value;
+      prof.defaults = {
+        color: $('p_def_color').value,
+        copies: Math.max(1, parseInt($('p_def_copies').value) || 1),
+        duplex: $('p_def_duplex').value === '1',
+        range: $('p_def_range').value.trim()
+      };
+      prof.rateText = Math.max(0, parseFloat($('p_rate_text').value) || 0);
+      prof.rateImage = Math.max(0, parseFloat($('p_rate_image').value) || 0);
+      prof.autoPrintMinutes = Math.max(0, parseInt($('p_auto_print').value) || 0);
+    }
+
+    // Build slots map
+    const slots = S.cfg.shop.slots || {};
+    const bwProf = printerProfiles.find(x => x.id === 'bw');
+    const colProf = printerProfiles.find(x => x.id === 'color');
+    if(bwProf) slots.bw = bwProf.device;
+    if(colProf) slots.color = colProf.device;
+
+    const activeProf = prof || bwProf || printerProfiles[0];
+
+    await api('/local/settings', {
+      printers: printerProfiles,
+      slots: slots,
+      mode: activeProf.mode,
+      defaults: activeProf.defaults,
+      rates: {
+        bw: activeProf.rateText,
+        color: activeProf.rateImage,
+        text: activeProf.rateText,
+        image: activeProf.rateImage
+      },
+      autoPrintMinutes: activeProf.autoPrintMinutes
+    });
+
+    $('p_saved').textContent = '✓ Printer settings saved.';
+    await load();
+    renderPrinterCards();
+    updateHardwarePrintersSummary();
+    setTimeout(() => { $('p_saved').textContent = ''; }, 3000);
+  } catch(e) {
+    $('p_saved').textContent = '';
+    $('p_err').textContent = e.message;
   }
 };
 
-$('save').onclick=async()=>{
-  $('serr').textContent='';$('saved').textContent='';
-  try{
-    await api('/local/settings',{
-      mode:document.querySelector('input[name=mode]:checked').value,
-      rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
-      defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
-      slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value}
-    });
-    $('saved').textContent='Saved. Page settings updated.';
-    await load();
-    updateHardwarePrintersSummary();
-  }catch(e){
-    $('serr').textContent=e.message;
+/* ---- Tab Switching ---- */
+function setTab(t){
+  tab = t;
+  ['0','1','3','4'].forEach(x => {
+    if($('p' + x)) $('p' + x).classList.toggle('on', x === t);
+    const tb = document.querySelector('.tab[data-t="' + x + '"]');
+    if(tb) tb.setAttribute('aria-selected', x === t);
+  });
+  if(t === '0' || t === '4') fetchJobs();
+  if(t === '1') { renderPrinterCards(); fillPrinterForm(); }
+  if(t === '3') loadRzp();
+}
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => setTab(b.dataset.t));
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setTab(b.dataset.go));
+
+$('abtn').onclick = async () => {
+  $('aerr').textContent = '';
+  try {
+    await api('/local/activate', { serverUrl: $('srv').value.trim(), key: $('key').value.trim() });
+    await boot();
+  } catch(e) {
+    $('aerr').textContent = e.message;
   }
 };
 
@@ -562,28 +814,44 @@ function renderAgentViews() {
     if (!filtered.length) {
       ovTable.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2rem 1.2rem;text-align:center"><p style="font-weight:600;margin-bottom:.3rem">No print jobs in this period (' + (agentFilter === 'today' ? 'Today' : agentFilter === 'week' ? 'Current week' : 'Custom range') + ')</p><p style="color:var(--mute);max-width:48ch;margin:0 auto;font-size:.9rem">Documents printed by customers during this period will appear here automatically.</p></div>';
     } else {
-      ovTable.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
-        + filtered.slice(0, 6).map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
+      ovTable.innerHTML = '<div class="tw"><table><thead><tr><th>Token</th><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+        + filtered.slice(0, 6).map(j => '<tr><td><b>#' + (j.token || 101) + '</b></td><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
         + '</tbody></table></div>';
     }
   }
 
-  // Print jobs table view
+  // Print jobs table view & Voice Alert Toggle (as drawn in user's 5th image!)
   const jobsBox = $('jobs_table_box');
   const badgeBox = $('agent_jobs_summary_badge');
+  const isVoiceOn = localStorage.getItem('pqr_voice_alert') !== 'off';
+
   if (badgeBox) {
-    badgeBox.innerHTML = '<div style="display:flex;gap:.6rem;flex-wrap:wrap">'
+    badgeBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem">'
+      + '<div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">'
       + '<span class="pill on">Total Earned: ₹' + (Math.round(totalRevenue * 100) / 100) + '</span>'
       + '<span class="pill">Showing ' + filtered.length + ' jobs</span>'
       + '<span class="pill">' + totalPages + ' pages (' + bwPages + ' B&amp;W, ' + colPages + ' Colour)</span>'
+      + '</div>'
+      + '<button type="button" class="btn ghost" id="btn_voice_toggle" style="padding:.35rem .9rem;font-size:.85rem;border-radius:999px;cursor:pointer">'
+      + (isVoiceOn ? '🔊 Voice Alert: ON' : '🔇 Voice Alert: OFF') + '</button>'
       + '</div>';
+
+    const vt = $('btn_voice_toggle');
+    if(vt) {
+      vt.onclick = () => {
+        const cur = localStorage.getItem('pqr_voice_alert') !== 'off';
+        localStorage.setItem('pqr_voice_alert', cur ? 'off' : 'on');
+        renderAgentViews();
+      };
+    }
   }
+
   if (jobsBox) {
     if (!filtered.length) {
       jobsBox.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs in this period</p><p style="color:var(--mute);max-width:50ch;margin:0 auto">When customers scan your counter QR and send files, they will appear here live.</p></div>';
     } else {
-      jobsBox.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
-        + filtered.map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
+      jobsBox.innerHTML = '<div class="tw"><table><thead><tr><th>Token</th><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+        + filtered.map(j => '<tr><td><b>#' + (j.token || 101) + '</b></td><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
         + '</tbody></table></div>';
     }
   }
@@ -602,11 +870,103 @@ async function fetchJobs(){
 const rjb = $('refresh_jobs_btn');
 if(rjb) rjb.onclick = fetchJobs;
 
-$('qrb').onclick=async()=>{const q=await api('/local/qr');$('q_shop').textContent=S.cfg.shop.name;$('q_img').src=q.img;$('qm').showModal()};
-if($('agent_ov_qr_btn')) $('agent_ov_qr_btn').onclick=()=>$('qrb').click();
-$('qc').onclick=()=>$('qm').close();
-$('pr').onclick=()=>window.print();
-$('logout').onclick=async()=>{if(confirm('Remove this key from this PC?')){await api('/local/logout',{});await boot()}};
+$('qrb').onclick = async () => {
+  const q = await api('/local/qr');
+  $('q_shop').textContent = S.cfg.shop.name;
+  $('q_img').src = q.img;
+  $('qm').showModal();
+};
+if($('agent_ov_qr_btn')) $('agent_ov_qr_btn').onclick = () => $('qrb').click();
+$('qc').onclick = () => $('qm').close();
+$('pr').onclick = () => window.print();
+$('logout').onclick = async () => {
+  if(confirm('Remove this key from this PC?')){
+    await api('/local/logout', {});
+    await boot();
+  }
+};
+
+/* ---- Pending Jobs & Print Confirmation Popup ---- */
+let currentPendingJob = null;
+async function checkPendingJobs(){
+  if(!S || !S.activated) return;
+  try {
+    const list = await api('/local/pending-jobs');
+    if(Array.isArray(list) && list.length > 0) {
+      const job = list[0];
+      currentPendingJob = job;
+
+      // Voice alert for new jobs
+      if(!spokenJobIds.has(job.id)) {
+        spokenJobIds.add(job.id);
+        speakJob(job.token, job.amount);
+
+        // Native browser/desktop notification when window is backgrounded/minimized
+        if(window.Notification && Notification.permission === 'granted') {
+          try {
+            new Notification('New Print Job! Token #' + job.token, {
+              body: '₹' + job.amount + ' · ' + job.filename + '\nWaiting for your confirmation (Auto-prints in 5m)',
+              tag: 'job_' + job.id
+            });
+          } catch(e){}
+        }
+      }
+
+      // Update popup modal details
+      $('modal_token_banner').textContent = 'Token #' + (job.token || 101);
+      $('modal_filename').textContent = job.filename;
+      let pageStr = job.pages + ' pages';
+      if(job.textPages || job.imagePages) {
+        pageStr = (job.textPages || 0) + ' Text, ' + (job.imagePages || 0) + ' Photo/Image';
+      }
+      $('modal_pages_info').textContent = pageStr + ' × ' + (job.copies || 1) + ' copies';
+      $('modal_amount_info').textContent = '₹' + job.amount + ' (Paid via UPI)';
+
+      const min = Math.floor(job.remainingSec / 60);
+      const sec = job.remainingSec % 60;
+      $('modal_countdown_badge').textContent = '⏱️ Auto-print: ' + String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+
+      const modal = $('modal_print_confirm');
+      if(!modal.open) {
+        modal.showModal();
+      }
+    } else {
+      currentPendingJob = null;
+      const modal = $('modal_print_confirm');
+      if(modal.open) {
+        modal.close();
+      }
+    }
+  } catch(e){
+    console.warn('checkPendingJobs error', e);
+  }
+}
+
+$('btn_modal_print_now').onclick = async () => {
+  if(!currentPendingJob) return;
+  $('btn_modal_print_now').disabled = true;
+  try {
+    await api('/local/print-now', { id: currentPendingJob.id });
+    $('modal_print_confirm').close();
+    await fetchJobs();
+  } catch(e) {
+    alert('Print error: ' + e.message);
+  } finally {
+    $('btn_modal_print_now').disabled = false;
+  }
+};
+
+$('btn_modal_cancel_job').onclick = async () => {
+  if(!currentPendingJob) return;
+  if(!confirm('Cancel and reject Token #' + currentPendingJob.token + '?')) return;
+  try {
+    await api('/local/cancel-job', { id: currentPendingJob.id });
+    $('modal_print_confirm').close();
+    await fetchJobs();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+};
 
 function tick(){
   if(!S||!S.activated)return;
@@ -623,10 +983,15 @@ function tick(){
 }
 
 async function boot(){
+  if(window.Notification && Notification.permission === 'default') {
+    try { Notification.requestPermission(); } catch(e){}
+  }
   await load();
   if(S.activated){
-    await fillPrinters();
-    fillSettings();
+    await fetchHardwarePrinters();
+    initPrinterProfiles();
+    renderPrinterCards();
+    fillPrinterForm();
     setTab('0');
     loadRzp();
     await fetchJobs();
@@ -636,7 +1001,8 @@ async function boot(){
 boot();
 setInterval(tick,1000);
 setInterval(()=>load().catch(()=>{}),5000);
-setInterval(()=>{ if(tab==='0' || tab==='4') fetchJobs().catch(()=>{}); },5000);
+setInterval(()=>{ if(tab==='0' || tab==='4') fetchJobs().catch(()=>{}); },4000);
+setInterval(checkPendingJobs, 1200);
 
 // Ping agent & handle graceful window close shutdown
 setInterval(()=>{ fetch('/local/ping').catch(()=>{}); },3000);
