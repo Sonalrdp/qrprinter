@@ -934,16 +934,53 @@ async function dash(){
   };
 
   const plans=[['demo','48-hour demo','Try everything for two days. One per account.',null],['3m','3 months','For a new shop or a busy season.',me.prices['3m']],['6m','6 months','Half a year, no renewal to remember.',me.prices['6m']],['12m','12 months','One key for the whole year.',me.prices['12m']]];
-  $('planlist').innerHTML=plans.map(p=>'<li><b>'+p[1]+'</b><span>'+p[2]+'</span><span class="pr">'+(p[3]?'\u20B9'+p[3]:'Free')+'</span><button class="btn ghost" data-p="'+p[0]+'"'+(p[0]==='demo'&&me.demoUsed?' disabled style="opacity:.4;cursor:default"':'')+'>'+(p[0]==='demo'&&me.demoUsed?'Used':'Select')+'</button></li>').join('');
+  $('planlist').innerHTML=plans.map(p=>{
+    const isPaid = !!p[3];
+    const isDemo = p[0] === 'demo';
+    const isUsed = isDemo && me.demoUsed;
+    const canSelect = isDemo ? !isUsed : !!me.platformRzpOn;
+    const disabledAttr = !canSelect ? ' disabled style="opacity:.4;cursor:not-allowed"' : '';
+    const btnLabel = isUsed ? 'Used' : (!canSelect ? 'Disabled' : 'Select');
+    return '<li><b>'+p[1]+'</b><span>'+p[2]+(isPaid && !me.platformRzpOn ? ' <span style="color:var(--mag);font-weight:600;display:block;margin-top:0.25rem">Payment gateway not configured in .env</span>' : '')+'</span><span class="pr">'+(p[3]?'\u20B9'+p[3]:'Free')+'</span><button class="btn ghost" data-p="'+p[0]+'"'+disabledAttr+'>'+btnLabel+'</button></li>';
+  }).join('');
   $('buybox').innerHTML='';
-  $('planlist').querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const p=plans.find(x=>x[0]===b.dataset.p);
+  $('planlist').querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{
+    if(b.disabled)return;
+    const p=plans.find(x=>x[0]===b.dataset.p);
+    const isPaid = !!p[3];
+    if(isPaid && !me.platformRzpOn){
+      $('buybox').innerHTML='<div class="buybox"><p style="color:var(--mag);font-weight:600">Online payment is currently disabled: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_WEBHOOK_SECRET must be configured in the server .env before purchasing plans.</p></div>';
+      return;
+    }
     $('buybox').innerHTML='<div class="buybox"><p><b>'+p[1]+'</b>'+(p[3]?' for \u20B9'+p[3]+'.':'. No payment needed.')+' Your activation key appears below right after.</p><button class="btn" id="go">'+(p[3]?'Pay \u20B9'+p[3]+' and get key':'Get my demo key')+'</button><button class="btn ghost" id="no">Cancel</button><div class="err" id="be"></div></div>';
     $('no').onclick=()=>$('buybox').innerHTML='';
-    $('go').onclick=async()=>{try{
-      const r=await api('/api/buy',{plan:p[0]});
-      if(r.order){await load('https://checkout.razorpay.com/v1/checkout.js');
-        await new Promise((ok,no)=>rzpPay(r,async x=>{try{await api('/api/buy/verify',x);ok()}catch(e){no(e)}},no,p[1]+' plan'))}
-      await dash();$('keys').scrollIntoView({behavior:'smooth'})}catch(e){$('be').textContent=e.message}}});
+    $('go').onclick=async()=>{
+      if(isPaid && !me.platformRzpOn){
+        $('be').textContent='Payment gateway not configured in .env. Button disabled.';
+        $('go').disabled = true;
+        return;
+      }
+      try{
+        $('be').textContent='';
+        $('go').disabled=true;
+        const r=await api('/api/buy',{plan:p[0]});
+        if(r.order){
+          await load('https://checkout.razorpay.com/v1/checkout.js');
+          await new Promise((ok,no)=>rzpPay(r,async x=>{try{await api('/api/buy/verify',x);ok()}catch(e){no(e)}},no,p[1]+' plan'));
+          await dash();
+          $('keys').scrollIntoView({behavior:'smooth'});
+        } else if(p[0]==='demo' && r.key){
+          await dash();
+          $('keys').scrollIntoView({behavior:'smooth'});
+        } else {
+          throw new Error('Payment was not completed. Key cannot be issued.');
+        }
+      }catch(e){
+        $('go').disabled=false;
+        $('be').textContent=e.message;
+      }
+    };
+  });
   const ks=await api('/api/keys');
   const fmt=t=>new Date(t).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
   $('keys').innerHTML=ks.length?ks.map(k=>'<div class="keyrow"><code>'+esc(k.key)+'</code><button class="btn ghost" data-c="'+esc(k.key)+'" style="padding:.45rem .9rem">Copy</button><span class="meta">'+esc(k.planName)+(k.status==='active'?' \u2013 runs until '+fmt(k.expiresAt):k.status==='expired'?' \u2013 ended '+fmt(k.expiresAt):' \u2013 timer starts when you activate')+'</span><span class="pill '+(k.status==='active'?'on':k.status==='expired'?'off':'')+'">'+(k.status==='waiting'?'Not activated':k.status==='active'?'Active':'Expired')+'</span></div>').join('')

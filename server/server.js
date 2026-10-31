@@ -18,9 +18,13 @@ const http=require('http'),fs=require('fs'),path=require('path'),crypto=require(
 });
 
 const PORT=process.env.PORT||3000;
-// ---- RAZORPAY: set RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET (+ RAZORPAY_WEBHOOK_SECRET) in .env to turn on real payments ----
-const RZP_ID=process.env.RAZORPAY_KEY_ID||'',RZP_SECRET=process.env.RAZORPAY_KEY_SECRET||'',RZP_WH=process.env.RAZORPAY_WEBHOOK_SECRET||'';
-const RZP_ON=!!(RZP_ID&&RZP_SECRET),RZP_TEST=RZP_ID.startsWith('rzp_test_');
+// ---- RAZORPAY: set RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET + RAZORPAY_WEBHOOK_SECRET in .env to turn on real payments ----
+const RZP_ID=(process.env.RAZORPAY_KEY_ID||'').trim();
+const RZP_SECRET=(process.env.RAZORPAY_KEY_SECRET||'').trim();
+const RZP_WH=(process.env.RAZORPAY_WEBHOOK_SECRET||'').trim();
+// All 3 keys are required in .env for platform payments to be enabled:
+const RZP_ON=!!(RZP_ID && RZP_SECRET && RZP_WH);
+const RZP_TEST=RZP_ID.startsWith('rzp_test_');
 const FEE_PCT=Math.max(0,Math.min(50,Number(process.env.PLATFORM_FEE_PERCENT)||0)); // your cut of each print payment
 const GS_URL=(process.env.GOOGLE_SCRIPT_URL||'https://script.google.com/macros/s/AKfycbwMLzEq4MJ4wCabzpo80mbiH7UnpmoZO7X3DiSCEytiH15kXvitAtttuhTjg1fQUE7v/exec').trim();
 
@@ -564,21 +568,39 @@ http.createServer(async(req,res)=>{
         save();
         return J({ token: t, admin: !!usr.isAdmin });
       }
-      if(p==='/api/me'){if(!me)return J({error:'Log in first'},401);return J({name:me.name,email:me.email,demoUsed:me.demoUsed,prices:PRICES,names:NAMES,hasRzp:!!(me.rzpKeyId&&me.rzpKeySecret),rzpKeyId:me.rzpKeyId||''})}
+      if(p==='/api/me'){
+        if(!me)return J({error:'Log in first'},401);
+        return J({
+          name:me.name,
+          email:me.email,
+          demoUsed:me.demoUsed,
+          prices:PRICES,
+          names:NAMES,
+          hasRzp:!!(me.rzpKeyId&&me.rzpKeySecret),
+          rzpKeyId:me.rzpKeyId||'',
+          platformRzpOn: RZP_ON
+        });
+      }
       if(p==='/api/buy'&&m==='POST'){
         if(!me)return J({error:'Log in first'},401);
-        if(b.plan==='demo'){if(me.demoUsed)return J({error:'You have already used your 48-hour demo.'},400);me.demoUsed=true}
-        else if(!PRICES[b.plan])return J({error:'Unknown plan'},400);
-        if(b.plan!=='demo'&&RZP_ON){
-          // Real payment: the key is created only after Razorpay confirms (/api/buy/verify or the webhook).
-          const o={kind:'plan',userId:me.id,plan:b.plan,amount:Math.round(PRICES[b.plan]*100),status:'created',createdAt:Date.now()};
-          return J({order:await createOrder(o,'plan_'+rid(4)),keyId:RZP_ID});
+        if(b.plan==='demo'){
+          if(me.demoUsed)return J({error:'You have already used your 48-hour demo.'},400);
+          me.demoUsed=true;
+          const k=newKey(me.id,'demo',0);save();return J(k);
         }
-        const k=newKey(me.id,b.plan,PRICES[b.plan]||0);save();return J(k); // simulated (no Razorpay keys set)
+        if(!PRICES[b.plan])return J({error:'Unknown plan'},400);
+        // If RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, or RAZORPAY_WEBHOOK_SECRET are not set in .env, NEVER generate or show a key!
+        if(!RZP_ON){
+          return J({error:'Payment gateway is not configured on this server. Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET) are missing in .env. Key cannot be generated.'},400);
+        }
+        // Real payment: the key is created only after Razorpay confirms (/api/buy/verify or the webhook).
+        const o={kind:'plan',userId:me.id,plan:b.plan,amount:Math.round(PRICES[b.plan]*100),status:'created',createdAt:Date.now()};
+        return J({order:await createOrder(o,'plan_'+rid(4)),keyId:RZP_ID});
       }
       if(p==='/api/buy/verify'&&m==='POST'){
         if(!me)return J({error:'Log in first'},401);
-        const o=RZP_ON&&db.orders.find(x=>x.id===b.razorpay_order_id&&x.kind==='plan'&&x.userId===me.id);
+        if(!RZP_ON)return J({error:'Payment gateway is not configured on this server.'},400);
+        const o=db.orders.find(x=>x.id===b.razorpay_order_id&&x.kind==='plan'&&x.userId===me.id);
         if(!o||!sigOk(b))return J({error:'Payment could not be verified.'},400);
         settleOrder(o,b.razorpay_payment_id);return J({key:o.keyId});
       }
