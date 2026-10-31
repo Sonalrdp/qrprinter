@@ -546,7 +546,7 @@ http.createServer(async(req,res)=>{
         const myKeys=db.keys.filter(k=>k.userId===me.id).map(k=>k.key);
         const myShops=db.shops.filter(s=>myKeys.includes(s.keyId));
         const myShopIds=myShops.map(s=>s.id);
-        const jobs=db.jobs.filter(j=>myShopIds.includes(j.shopId)).slice(-150).reverse().map(j=>{
+        const jobs=db.jobs.filter(j=>myShopIds.includes(j.shopId)).slice(-500).reverse().map(j=>{
           const sh=myShops.find(s=>s.id===j.shopId);
           return {
             id:j.id,
@@ -625,7 +625,7 @@ http.createServer(async(req,res)=>{
       }
       if(p==='/api/agent/history'){
         if(!ashop)return J({error:'Key not valid'},401);
-        const jobs=db.jobs.filter(j=>j.shopId===ashop.id).slice(-100).reverse().map(j=>({
+        const jobs=db.jobs.filter(j=>j.shopId===ashop.id).slice(-500).reverse().map(j=>({
           id:j.id,
           filename:j.filename,
           pages:j.pages,

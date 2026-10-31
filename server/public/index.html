@@ -230,6 +230,15 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 .inl{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem}
 .inl label{display:block;font-weight:500;margin-bottom:.3rem}
 .inl input,.inl select{padding:.7rem .8rem;border:1.5px solid var(--line);border-radius:10px;background:#fff;font:inherit}
+.filter-seg{display:inline-flex;background:#E8EAE4;border-radius:999px;padding:3px;gap:2px}
+.filter-seg button{background:transparent;border:0;padding:.38rem .95rem;border-radius:999px;font:600 .85rem var(--body);color:var(--ink);cursor:pointer;transition:all .15s}
+.filter-seg button.active,.filter-seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.filter-bar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.8rem}
+.kpi-card{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.25rem}
+.kpi-card small{color:var(--mute);display:block;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.kpi-card b{font-size:1.9rem;display:block;margin-top:.35rem;line-height:1.15;font-family:var(--display);letter-spacing:-.02em}
+.kpi-card span{font-size:.82rem;color:var(--mute);display:block;margin-top:.3rem}
 @media (max-width:900px){.figs{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -383,13 +392,104 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 <div id="admin_switch_bar" style="margin-bottom:1.2rem" hidden><a class="btn ghost" href="#/admin" style="padding:0.45rem 1rem;font-size:0.9rem">&larr; Switch to Admin Overview</a></div>
 
 <div class="atabs" id="dash_tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-t="plans">Buy software</button>
-  <button role="tab" aria-selected="false" data-t="rzp">Payment Gateway</button>
+  <button role="tab" aria-selected="true" data-t="overview">Dashboard</button>
   <button role="tab" aria-selected="false" data-t="jobs">Print jobs</button>
+  <button role="tab" aria-selected="false" data-t="plans">Buy software</button>
+  <button role="tab" aria-selected="false" data-t="rzp">Payment Gateway</button>
   <button role="tab" aria-selected="false" data-t="dl">Download and install</button>
 </div>
 
-<div id="dash-panel-plans">
+<div id="dash-panel-overview">
+<section class="dsec" style="margin-top:0">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem">
+    <div>
+      <h2 style="margin-bottom:0.2rem">Shop Performance</h2>
+      <p class="lead2" style="margin-bottom:0">Live overview of your shop print activity, customer payments, and software license.</p>
+    </div>
+    <div class="filter-bar">
+      <span style="font-size:0.85rem;color:var(--mute);font-weight:600">Filter:</span>
+      <div class="filter-seg" id="dash_filter_seg">
+        <button type="button" class="active" data-f="today">Today</button>
+        <button type="button" data-f="week">Current week</button>
+        <button type="button" data-f="custom">Custom date</button>
+      </div>
+      <div id="dash_custom_dates" style="display:none;align-items:center;gap:0.4rem">
+        <input type="date" id="dash_date_start" style="padding:0.35rem 0.6rem;font-size:0.85rem;width:auto">
+        <span style="color:var(--mute);font-size:0.85rem">to</span>
+        <input type="date" id="dash_date_end" style="padding:0.35rem 0.6rem;font-size:0.85rem;width:auto">
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <small>Total Earnings</small>
+      <b id="ov_revenue" style="color:#1F7A47">₹0</b>
+      <span id="ov_revenue_sub">Direct to your UPI / Bank</span>
+    </div>
+    <div class="kpi-card">
+      <small>Print Jobs</small>
+      <b id="ov_jobs_count">0</b>
+      <span id="ov_jobs_sub">0 printed</span>
+    </div>
+    <div class="kpi-card">
+      <small>Total Pages</small>
+      <b id="ov_pages_count">0</b>
+      <span id="ov_pages_sub">0 B&amp;W · 0 Colour</span>
+    </div>
+    <div class="kpi-card">
+      <small>Software License</small>
+      <b id="ov_key_status" style="font-size:1.4rem;margin-top:0.45rem">–</b>
+      <span id="ov_key_sub">–</span>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1.5px solid var(--ink);border-radius:12px;padding:1.2rem 1.4rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+    <div>
+      <b style="font-size:1.05rem;display:block;margin-bottom:0.2rem">Counter Standee QR Code</b>
+      <span style="color:var(--mute);font-size:0.88rem">Customers scan this QR code on your shop counter to upload and print instantly.</span>
+    </div>
+    <button class="btn" id="ov_view_qr_btn" style="padding:0.55rem 1.25rem">Print A4 Standee QR</button>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+    <h3 style="margin-bottom:0">Recent Print Activity</h3>
+    <button class="btn ghost" id="ov_goto_jobs_btn" style="padding:0.4rem 0.9rem;font-size:0.88rem">View all print jobs &rarr;</button>
+  </div>
+  <div id="ov_recent_jobs_table"></div>
+</section>
+</div>
+
+<div id="dash-panel-jobs" hidden>
+<section class="dsec" style="margin-top:0">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem">
+    <div>
+      <h2 style="margin-bottom:0.2rem">Print jobs</h2>
+      <p class="lead2" style="margin-bottom:0">Live queue of documents printed and paid by customers at your shop.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+      <div class="filter-bar">
+        <span style="font-size:0.85rem;color:var(--mute);font-weight:600">Filter:</span>
+        <div class="filter-seg" id="jobs_filter_seg">
+          <button type="button" class="active" data-f="today">Today</button>
+          <button type="button" data-f="week">Current week</button>
+          <button type="button" data-f="custom">Custom date</button>
+        </div>
+        <div id="jobs_custom_dates" style="display:none;align-items:center;gap:0.4rem">
+          <input type="date" id="jobs_date_start" style="padding:0.35rem 0.6rem;font-size:0.85rem;width:auto">
+          <span style="color:var(--mute);font-size:0.85rem">to</span>
+          <input type="date" id="jobs_date_end" style="padding:0.35rem 0.6rem;font-size:0.85rem;width:auto">
+        </div>
+      </div>
+      <button class="btn ghost" id="refresh_jobs_btn" style="padding:.5rem 1rem">↻ Refresh jobs</button>
+    </div>
+  </div>
+  <div id="jobs_summary_badge" style="margin-bottom:1rem"></div>
+  <div id="user_jobs_table"></div>
+</section>
+</div>
+
+<div id="dash-panel-plans" hidden>
   <section class="dsec" style="margin-top:0"><h2>Buy software</h2><ul class="planlist" id="planlist"></ul><div id="buybox"></div></section>
   <section class="dsec"><h2>Your activation keys</h2><div id="keys"></div></section>
 </div>
@@ -751,18 +851,18 @@ async function dash(){
   if($('admin_switch_bar')) $('admin_switch_bar').hidden = localStorage.getItem('pq_admin') !== '1';
 
   // Tab switcher
-  let dashTab = sessionStorage.getItem('pq_dash_tab') || 'plans';
+  let dashTab = sessionStorage.getItem('pq_dash_tab') || 'overview';
   const switchDashTab = (t) => {
     dashTab = t;
     sessionStorage.setItem('pq_dash_tab', t);
-    ['plans', 'rzp', 'jobs', 'dl'].forEach(x => {
+    ['overview', 'jobs', 'plans', 'rzp', 'dl'].forEach(x => {
       const p = $('dash-panel-' + x);
       if(p) p.hidden = x !== t;
     });
     document.querySelectorAll('#dash_tabs button').forEach(b => {
       b.setAttribute('aria-selected', b.dataset.t === t);
     });
-    if(t === 'jobs') loadUserJobs();
+    if(t === 'overview' || t === 'jobs') loadUserJobsAndMetrics();
   };
   document.querySelectorAll('#dash_tabs button').forEach(b => {
     b.onclick = () => switchDashTab(b.dataset.t);
@@ -840,28 +940,186 @@ async function dash(){
     :'<p>No keys yet. Select a plan above and your key will show up here.</p>';
   $('keys').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.dataset.c);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)});
   
-  // User print jobs loader
-  async function loadUserJobs(){
-    const box = $('user_jobs_table');
-    if(!box) return;
-    box.innerHTML = '<p style="color:var(--mute)">Loading print jobs...</p>';
-    try {
-      const jobs = await api('/api/user/jobs');
-      if(!jobs || !jobs.length){
-        box.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs yet</p><p style="color:var(--ink2);max-width:52ch;margin:0 auto">When customers scan your shop standee QR and upload files, their print jobs will show up here automatically.</p></div>';
-        return;
-      }
-      const fmtJ = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
-      const pillJ = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + esc(s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
-      box.innerHTML = '<div class="tw"><table><thead><tr><th>Date &amp; Time</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
-        + jobs.map(j => '<tr><td>' + fmtJ(j.createdAt) + '</td><td><code>' + esc(j.filename) + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pillJ(j.status) + '</td></tr>').join('')
-        + '</tbody></table></div>';
-    } catch(err) {
-      box.innerHTML = '<p class="err">' + esc(err.message) + '</p>';
+  // Software License Status in KPI
+  const activeKey = ks.find(k => k.status === 'active') || ks[0];
+  if ($('ov_key_status')) {
+    if (activeKey) {
+      $('ov_key_status').textContent = activeKey.planName;
+      $('ov_key_sub').textContent = activeKey.status === 'active' ? 'Active · expires ' + fmt(activeKey.expiresAt) : (activeKey.status === 'waiting' ? 'Not activated yet' : 'Expired');
+    } else {
+      $('ov_key_status').textContent = 'No active plan';
+      $('ov_key_sub').textContent = 'Select a plan under Buy software';
     }
   }
+
+  // Standee button & Go to jobs button
+  if ($('ov_view_qr_btn')) $('ov_view_qr_btn').onclick = () => $('qrmodal').showModal();
+  if ($('ov_goto_jobs_btn')) $('ov_goto_jobs_btn').onclick = () => switchDashTab('jobs');
+
+  // Date Filter & Metrics Logic
+  let cachedUserJobs = [];
+  let currentFilter = sessionStorage.getItem('pq_filter') || 'today';
+  let customStartDate = sessionStorage.getItem('pq_filter_start') || '';
+  let customEndDate = sessionStorage.getItem('pq_filter_end') || '';
+
+  // Set today's date in custom inputs as sensible defaults if empty
+  const todayStr = new Date().toISOString().split('T')[0];
+  if(!customStartDate) customStartDate = todayStr;
+  if(!customEndDate) customEndDate = todayStr;
+  ['dash_date_start', 'jobs_date_start'].forEach(id => { if($(id)) $(id).value = customStartDate; });
+  ['dash_date_end', 'jobs_date_end'].forEach(id => { if($(id)) $(id).value = customEndDate; });
+
+  function getRange(f, sStr, eStr) {
+    const now = new Date();
+    let start, end;
+    if (f === 'today') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } else if (f === 'week') {
+      const day = now.getDay();
+      const diffToMon = (day === 0 ? -6 : 1 - day);
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMon, 0, 0, 0, 0);
+      end = new Date(start.getTime() + (7 * 86400000) - 1);
+    } else if (f === 'custom') {
+      if (sStr) {
+        const [sy, sm, sd] = sStr.split('-').map(Number);
+        start = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+      } else {
+        start = new Date(0);
+      }
+      if (eStr) {
+        const [ey, em, ed] = eStr.split('-').map(Number);
+        end = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+      } else {
+        end = new Date(9999999999999);
+      }
+    } else {
+      start = new Date(0);
+      end = new Date(9999999999999);
+    }
+    return { start, end };
+  }
+
+  function applyFilter(f) {
+    currentFilter = f;
+    sessionStorage.setItem('pq_filter', f);
+    ['dash_filter_seg', 'jobs_filter_seg'].forEach(segId => {
+      const el = $(segId);
+      if(el) {
+        el.querySelectorAll('button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.f === f);
+        });
+      }
+    });
+    const showCustom = f === 'custom';
+    if ($('dash_custom_dates')) $('dash_custom_dates').style.display = showCustom ? 'inline-flex' : 'none';
+    if ($('jobs_custom_dates')) $('jobs_custom_dates').style.display = showCustom ? 'inline-flex' : 'none';
+    renderDashboardAndJobsViews();
+  }
+
+  // Bind filter buttons
+  ['dash_filter_seg', 'jobs_filter_seg'].forEach(segId => {
+    const el = $(segId);
+    if(el) {
+      el.querySelectorAll('button').forEach(btn => {
+        btn.onclick = () => applyFilter(btn.dataset.f);
+      });
+    }
+  });
+
+  const onCustomDateChange = () => {
+    customStartDate = $('dash_date_start') ? $('dash_date_start').value : customStartDate;
+    customEndDate = $('dash_date_end') ? $('dash_date_end').value : customEndDate;
+    sessionStorage.setItem('pq_filter_start', customStartDate);
+    sessionStorage.setItem('pq_filter_end', customEndDate);
+    ['jobs_date_start', 'dash_date_start'].forEach(id => { if($(id)) $(id).value = customStartDate; });
+    ['jobs_date_end', 'dash_date_end'].forEach(id => { if($(id)) $(id).value = customEndDate; });
+    renderDashboardAndJobsViews();
+  };
+  ['dash_date_start', 'dash_date_end', 'jobs_date_start', 'jobs_date_end'].forEach(id => {
+    if($(id)) $(id).onchange = onCustomDateChange;
+  });
+
+  function renderDashboardAndJobsViews() {
+    const { start, end } = getRange(currentFilter, customStartDate, customEndDate);
+    const filtered = cachedUserJobs.filter(j => {
+      if (!j.createdAt) return false;
+      const t = new Date(j.createdAt).getTime();
+      return t >= start.getTime() && t <= end.getTime();
+    });
+
+    // Calculate metrics
+    let totalRevenue = 0, printedCount = 0, queuedCount = 0, totalPages = 0, bwPages = 0, colPages = 0;
+    filtered.forEach(j => {
+      const pCount = (j.pages || 0) * (j.copies || 1);
+      totalPages += pCount;
+      if (j.color === 'col') colPages += pCount; else bwPages += pCount;
+      if (j.status === 'printed' || j.status === 'paid') {
+        totalRevenue += (j.amount || 0);
+      }
+      if (j.status === 'printed') printedCount++;
+      if (j.status === 'paid') queuedCount++;
+    });
+
+    // Update Overview KPIs
+    if ($('ov_revenue')) $('ov_revenue').textContent = '₹' + Math.round(totalRevenue * 100) / 100;
+    if ($('ov_jobs_count')) $('ov_jobs_count').textContent = filtered.length;
+    if ($('ov_jobs_sub')) $('ov_jobs_sub').textContent = printedCount + ' printed' + (queuedCount ? ' · ' + queuedCount + ' queued' : '');
+    if ($('ov_pages_count')) $('ov_pages_count').textContent = totalPages;
+    if ($('ov_pages_sub')) $('ov_pages_sub').textContent = bwPages + ' B&W · ' + colPages + ' Colour';
+
+    const fmtJ = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+    const pillJ = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + esc(s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
+
+    // Overview recent jobs (up to 6)
+    const ovTable = $('ov_recent_jobs_table');
+    if (ovTable) {
+      if (!filtered.length) {
+        ovTable.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2rem 1.2rem;text-align:center"><p style="font-weight:600;margin-bottom:0.3rem">No print jobs in this period (' + esc(currentFilter === 'today' ? 'Today' : currentFilter === 'week' ? 'Current week' : 'Custom range') + ')</p><p style="color:var(--mute);max-width:48ch;margin:0 auto;font-size:0.9rem">Documents printed by customers during this period will show up here automatically.</p></div>';
+      } else {
+        ovTable.innerHTML = '<div class="tw"><table><thead><tr><th>Date &amp; Time</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+          + filtered.slice(0, 6).map(j => '<tr><td>' + fmtJ(j.createdAt) + '</td><td><code>' + esc(j.filename) + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pillJ(j.status) + '</td></tr>').join('')
+          + '</tbody></table></div>';
+      }
+    }
+
+    // Print jobs tab view
+    const jobsTable = $('user_jobs_table');
+    const jobsBadge = $('jobs_summary_badge');
+    if (jobsBadge) {
+      jobsBadge.innerHTML = '<div style="display:flex;gap:0.6rem;flex-wrap:wrap">'
+        + '<span class="pill on">Total Earned: ₹' + (Math.round(totalRevenue * 100) / 100) + '</span>'
+        + '<span class="pill">Showing ' + filtered.length + ' jobs</span>'
+        + '<span class="pill">' + totalPages + ' pages (' + bwPages + ' B&amp;W, ' + colPages + ' Colour)</span>'
+        + '</div>';
+    }
+    if (jobsTable) {
+      if (!filtered.length) {
+        jobsTable.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs in this period</p><p style="color:var(--ink2);max-width:52ch;margin:0 auto">When customers scan your shop standee QR and upload files, their print jobs will show up here automatically.</p></div>';
+      } else {
+        jobsTable.innerHTML = '<div class="tw"><table><thead><tr><th>Date &amp; Time</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+          + filtered.map(j => '<tr><td>' + fmtJ(j.createdAt) + '</td><td><code>' + esc(j.filename) + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pillJ(j.status) + '</td></tr>').join('')
+          + '</tbody></table></div>';
+      }
+    }
+  }
+
+  // Loader for jobs
+  async function loadUserJobsAndMetrics(){
+    const box = $('user_jobs_table');
+    if(box && (!cachedUserJobs || !cachedUserJobs.length)) box.innerHTML = '<p style="color:var(--mute)">Loading print jobs...</p>';
+    try {
+      cachedUserJobs = await api('/api/user/jobs');
+      if(!Array.isArray(cachedUserJobs)) cachedUserJobs = [];
+      renderDashboardAndJobsViews();
+    } catch(err) {
+      if(box) box.innerHTML = '<p class="err">' + esc(err.message) + '</p>';
+    }
+  }
+
+  applyFilter(currentFilter);
   const rjb = $('refresh_jobs_btn');
-  if(rjb) rjb.onclick = loadUserJobs;
+  if(rjb) rjb.onclick = loadUserJobsAndMetrics;
 
   const dl=$('dl-agent-btn')||document.querySelector('.dl a');
   if(dl)dl.href='/downloads/PrintQR-Agent.zip?origin='+encodeURIComponent(window.location.origin);

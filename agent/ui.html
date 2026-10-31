@@ -52,6 +52,16 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
 .pill.on{background:#E6F4EA;color:#137333}
 .pill.off{background:#FCE8E6;color:#C5221F}
 
+.filter-bar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.filter-seg{display:inline-flex;background:#E8EAE4;border-radius:999px;padding:3px;gap:2px}
+.filter-seg button{background:transparent;border:0;padding:.35rem .85rem;border-radius:999px;font:600 .84rem "Segoe UI",system-ui,sans-serif;color:var(--ink);cursor:pointer;transition:all .15s}
+.filter-seg button.active{background:var(--ink);color:#fff}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.6rem}
+.kpi-card{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.15rem}
+.kpi-card small{color:var(--mute);display:block;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.kpi-card b{font-size:1.8rem;display:block;margin-top:.3rem;line-height:1.15}
+.kpi-card span{font-size:.8rem;color:var(--mute);display:block;margin-top:.25rem}
+
 @page{size:A4;margin:0}
 @media print{
   body *{visibility:hidden}
@@ -80,10 +90,78 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
   </div>
   <div class="main">
     <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-t="0">Dashboard</button>
       <button class="tab" role="tab" data-t="1">1. Printers</button>
       <button class="tab" role="tab" data-t="2">2. Page settings</button>
       <button class="tab" role="tab" data-t="3">3. Payment gateway</button>
       <button class="tab" role="tab" data-t="4">4. Print jobs</button>
+    </div>
+
+    <!-- Panel 0: Dashboard (Overview & Performance) -->
+    <div class="panel" id="p0">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem">
+        <div>
+          <h2 style="margin-bottom:.2rem">Shop Dashboard</h2>
+          <p style="margin-bottom:0;color:var(--mute)">Overview of print queue, earnings, and printer hardware status.</p>
+        </div>
+        <!-- Date Filter -->
+        <div class="filter-bar">
+          <span style="font-size:.85rem;color:var(--mute);font-weight:600">Filter:</span>
+          <div class="filter-seg" id="agent_dash_filter_seg">
+            <button type="button" class="active" data-f="today">Today</button>
+            <button type="button" data-f="week">Current week</button>
+            <button type="button" data-f="custom">Custom date</button>
+          </div>
+          <div id="agent_dash_custom_dates" style="display:none;align-items:center;gap:.3rem">
+            <input type="date" id="agent_dash_start" style="padding:.35rem .5rem;font-size:.85rem;width:auto">
+            <span style="color:var(--mute);font-size:.85rem">to</span>
+            <input type="date" id="agent_dash_end" style="padding:.35rem .5rem;font-size:.85rem;width:auto">
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <small>Total Earnings</small>
+          <b id="agent_ov_revenue" style="color:#1F7A47">₹0</b>
+          <span style="color:var(--mute)">Direct UPI collection</span>
+        </div>
+        <div class="kpi-card">
+          <small>Print Jobs</small>
+          <b id="agent_ov_jobs">0</b>
+          <span id="agent_ov_jobs_sub">0 printed</span>
+        </div>
+        <div class="kpi-card">
+          <small>Total Pages</small>
+          <b id="agent_ov_pages">0</b>
+          <span id="agent_ov_pages_sub">0 B&amp;W · 0 Colour</span>
+        </div>
+        <div class="kpi-card">
+          <small>Key Validity</small>
+          <b id="agent_ov_cd" style="font-size:1.4rem;margin-top:.4rem">–</b>
+          <span id="agent_ov_plan">–</span>
+        </div>
+      </div>
+
+      <!-- Hardware status banner -->
+      <div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1rem 1.3rem;margin-bottom:1.6rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+        <div>
+          <b style="display:block;margin-bottom:.2rem">Configured Hardware Printers</b>
+          <div id="agent_ov_printers_text" style="font-size:.88rem;color:var(--mute)">Loading printers...</div>
+        </div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn ghost" data-go="1" style="padding:.45rem .9rem;font-size:.85rem">Printers &rarr;</button>
+          <button class="btn ghost" id="agent_ov_qr_btn" style="padding:.45rem .9rem;font-size:.85rem">Print A4 Standee QR</button>
+        </div>
+      </div>
+
+      <!-- Recent prints -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+        <h3 style="margin-bottom:0">Recent Print Activity</h3>
+        <button class="btn ghost" data-go="4" style="padding:.4rem .9rem;font-size:.85rem">View all jobs &rarr;</button>
+      </div>
+      <div id="agent_ov_recent_jobs"></div>
     </div>
 
     <!-- Panel 1: Printers -->
@@ -184,8 +262,24 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
           <h2 style="margin-bottom:.2rem">Customer print jobs</h2>
           <p style="margin-bottom:0;color:var(--mute)">Live list of documents uploaded and printed at your shop.</p>
         </div>
-        <button class="btn ghost" id="refresh_jobs_btn" style="padding:.5rem 1rem">↻ Refresh list</button>
+        <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+          <div class="filter-bar">
+            <span style="font-size:.85rem;color:var(--mute);font-weight:600">Filter:</span>
+            <div class="filter-seg" id="agent_jobs_filter_seg">
+              <button type="button" class="active" data-f="today">Today</button>
+              <button type="button" data-f="week">Current week</button>
+              <button type="button" data-f="custom">Custom date</button>
+            </div>
+            <div id="agent_jobs_custom_dates" style="display:none;align-items:center;gap:.3rem">
+              <input type="date" id="agent_jobs_start" style="padding:.35rem .5rem;font-size:.85rem;width:auto">
+              <span style="color:var(--mute);font-size:.85rem">to</span>
+              <input type="date" id="agent_jobs_end" style="padding:.35rem .5rem;font-size:.85rem;width:auto">
+            </div>
+          </div>
+          <button class="btn ghost" id="refresh_jobs_btn" style="padding:.5rem 1rem">↻ Refresh list</button>
+        </div>
       </div>
+      <div id="agent_jobs_summary_badge" style="margin-bottom:1rem"></div>
       <div id="jobs_table_box"></div>
     </div>
 
@@ -198,7 +292,7 @@ td code{font:600 .88rem Consolas,"Courier New",monospace}
 <div class="acts"><button class="btn" id="pr">Print A4 page</button><button class="btn ghost" id="qc">Close</button></div></dialog>
 
 <script>
-const $=id=>document.getElementById(id);let S=null,printers=[],tab='2';
+const $=id=>document.getElementById(id);let S=null,printers=[],tab='0';
 const api=async(p,b)=>{const r=await fetch(p,b?{method:'POST',body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');return j};
 
 async function load(){
@@ -206,13 +300,29 @@ async function load(){
   $('act').hidden=S.activated;$('app').hidden=!S.activated;
   if(!S.activated){if(S.cfg&&S.cfg.serverUrl)$('srv').value=S.cfg.serverUrl;return}
   const c=S.cfg;$('uname').textContent=c.user.name;$('uemail').textContent=c.user.email;$('av').textContent=c.user.name.slice(0,2).toUpperCase();$('plan').textContent=c.plan;
+  if($('agent_ov_plan')) $('agent_ov_plan').textContent = c.plan + ' plan';
+  updateHardwarePrintersSummary();
   $('log').innerHTML='<b>Activity</b>'+(S.log.length?S.log.map(l=>'<div>'+l.t+'  '+l.m.replace(/</g,'&lt;')+'</div>').join(''):'<div>Waiting for print jobs.</div>');
+}
+
+function updateHardwarePrintersSummary(){
+  if(!S || !S.cfg || !S.cfg.shop) return;
+  const slots = S.cfg.shop.slots || {};
+  const activeSlots = [];
+  if(slots.bw) activeSlots.push('<b>B&W:</b> ' + slots.bw);
+  if(slots.color) activeSlots.push('<b>Colour:</b> ' + slots.color);
+  if(slots.duplex) activeSlots.push('<b>Duplex:</b> ' + slots.duplex);
+  if(slots.photo) activeSlots.push('<b>Photo:</b> ' + slots.photo);
+  if($('agent_ov_printers_text')){
+    $('agent_ov_printers_text').innerHTML = activeSlots.length ? activeSlots.join(' &nbsp;|&nbsp; ') : '<span style="color:var(--mag)">No printers selected yet. Click Printers to assign slots.</span>';
+  }
 }
 
 async function fillPrinters(){
   printers=await api('/local/printers');
   ['bw','color','duplex','photo'].forEach(k=>{const el=$('s_'+k),cur=S.cfg.shop.slots[k]||'';
     el.innerHTML='<option value="">Not set</option>'+printers.map(p=>'<option'+(p===cur?' selected':'')+'>'+p.replace(/</g,'&lt;')+'</option>').join('')});
+  updateHardwarePrintersSummary();
 }
 
 function fillSettings(){
@@ -225,13 +335,13 @@ function modeUI(){const v=document.querySelector('input[name=mode]:checked').val
 
 function setTab(t){
   tab=t;
-  ['1','2','3','4'].forEach(x=>{
+  ['0','1','2','3','4'].forEach(x=>{
     if($('p'+x))$('p'+x).classList.toggle('on',x===t);
     const tb=document.querySelector('.tab[data-t="'+x+'"]');
     if(tb)tb.setAttribute('aria-selected',x===t);
   });
+  if(t==='0'||t==='4')fetchJobs();
   if(t==='3')loadRzp();
-  if(t==='4')loadJobs();
 }
 
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
@@ -260,6 +370,7 @@ $('save').onclick=async()=>{
     });
     $('saved').textContent='Saved. Page settings updated.';
     await load();
+    updateHardwarePrintersSummary();
   }catch(e){
     $('serr').textContent=e.message;
   }
@@ -334,30 +445,165 @@ $('btn_reset_rzp').onclick = async () => {
   }
 };
 
-/* ---- Print jobs tab handlers ---- */
-async function loadJobs(){
-  const box = $('jobs_table_box');
-  if(!box) return;
-  box.innerHTML = '<p style="color:var(--mute)">Loading print jobs...</p>';
-  try {
-    const jobs = await api('/local/jobs');
-    if(!jobs || !jobs.length){
-      box.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs yet</p><p style="color:var(--mute);max-width:50ch;margin:0 auto">When customers scan your counter QR and send files, they will appear here live.</p></div>';
-      return;
+/* ---- Date Filtering & Jobs handlers ---- */
+let cachedAgentJobs = [];
+let agentFilter = 'today';
+let agentCustomStart = '';
+let agentCustomEnd = '';
+
+const initTodayStr = new Date().toISOString().split('T')[0];
+agentCustomStart = initTodayStr;
+agentCustomEnd = initTodayStr;
+['agent_dash_start', 'agent_jobs_start'].forEach(id => { if($(id)) $(id).value = agentCustomStart; });
+['agent_dash_end', 'agent_jobs_end'].forEach(id => { if($(id)) $(id).value = agentCustomEnd; });
+
+function getAgentRange(f, sStr, eStr) {
+  const now = new Date();
+  let start, end;
+  if (f === 'today') {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  } else if (f === 'week') {
+    const day = now.getDay();
+    const diffToMon = (day === 0 ? -6 : 1 - day);
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMon, 0, 0, 0, 0);
+    end = new Date(start.getTime() + (7 * 86400000) - 1);
+  } else if (f === 'custom') {
+    if (sStr) {
+      const [sy, sm, sd] = sStr.split('-').map(Number);
+      start = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+    } else {
+      start = new Date(0);
     }
-    const fmt = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
-    const pill = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + (s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
-    box.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
-      + jobs.map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
-      + '</tbody></table></div>';
-  } catch(e) {
-    box.innerHTML = '<p class="err">' + e.message + '</p>';
+    if (eStr) {
+      const [ey, em, ed] = eStr.split('-').map(Number);
+      end = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+    } else {
+      end = new Date(9999999999999);
+    }
+  } else {
+    start = new Date(0);
+    end = new Date(9999999999999);
+  }
+  return { start, end };
+}
+
+function applyAgentFilter(f) {
+  agentFilter = f;
+  ['agent_dash_filter_seg', 'agent_jobs_filter_seg'].forEach(segId => {
+    const el = $(segId);
+    if(el) {
+      el.querySelectorAll('button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.f === f);
+      });
+    }
+  });
+  const showCustom = f === 'custom';
+  if ($('agent_dash_custom_dates')) $('agent_dash_custom_dates').style.display = showCustom ? 'inline-flex' : 'none';
+  if ($('agent_jobs_custom_dates')) $('agent_jobs_custom_dates').style.display = showCustom ? 'inline-flex' : 'none';
+  renderAgentViews();
+}
+
+// Bind filter segment buttons
+['agent_dash_filter_seg', 'agent_jobs_filter_seg'].forEach(segId => {
+  const el = $(segId);
+  if(el) {
+    el.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => applyAgentFilter(btn.dataset.f);
+    });
+  }
+});
+
+const onAgentCustomDateChange = () => {
+  agentCustomStart = $('agent_dash_start') ? $('agent_dash_start').value : agentCustomStart;
+  agentCustomEnd = $('agent_dash_end') ? $('agent_dash_end').value : agentCustomEnd;
+  ['agent_jobs_start', 'agent_dash_start'].forEach(id => { if($(id)) $(id).value = agentCustomStart; });
+  ['agent_jobs_end', 'agent_dash_end'].forEach(id => { if($(id)) $(id).value = agentCustomEnd; });
+  renderAgentViews();
+};
+['agent_dash_start', 'agent_dash_end', 'agent_jobs_start', 'agent_jobs_end'].forEach(id => {
+  if($(id)) $(id).onchange = onAgentCustomDateChange;
+});
+
+function renderAgentViews() {
+  const { start, end } = getAgentRange(agentFilter, agentCustomStart, agentCustomEnd);
+  const filtered = cachedAgentJobs.filter(j => {
+    if (!j.createdAt) return false;
+    const t = new Date(j.createdAt).getTime();
+    return t >= start.getTime() && t <= end.getTime();
+  });
+
+  // Calculate metrics
+  let totalRevenue = 0, printedCount = 0, queuedCount = 0, totalPages = 0, bwPages = 0, colPages = 0;
+  filtered.forEach(j => {
+    const pCount = (j.pages || 0) * (j.copies || 1);
+    totalPages += pCount;
+    if (j.color === 'col') colPages += pCount; else bwPages += pCount;
+    if (j.status === 'printed' || j.status === 'paid') {
+      totalRevenue += (j.amount || 0);
+    }
+    if (j.status === 'printed') printedCount++;
+    if (j.status === 'paid') queuedCount++;
+  });
+
+  // Dashboard KPIs
+  if ($('agent_ov_revenue')) $('agent_ov_revenue').textContent = '₹' + Math.round(totalRevenue * 100) / 100;
+  if ($('agent_ov_jobs')) $('agent_ov_jobs').textContent = filtered.length;
+  if ($('agent_ov_jobs_sub')) $('agent_ov_jobs_sub').textContent = printedCount + ' printed' + (queuedCount ? ' · ' + queuedCount + ' queued' : '');
+  if ($('agent_ov_pages')) $('agent_ov_pages').textContent = totalPages;
+  if ($('agent_ov_pages_sub')) $('agent_ov_pages_sub').textContent = bwPages + ' B&W · ' + colPages + ' Colour';
+
+  const fmt = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+  const pill = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + (s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
+
+  // Dashboard recent jobs
+  const ovTable = $('agent_ov_recent_jobs');
+  if (ovTable) {
+    if (!filtered.length) {
+      ovTable.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2rem 1.2rem;text-align:center"><p style="font-weight:600;margin-bottom:.3rem">No print jobs in this period (' + (agentFilter === 'today' ? 'Today' : agentFilter === 'week' ? 'Current week' : 'Custom range') + ')</p><p style="color:var(--mute);max-width:48ch;margin:0 auto;font-size:.9rem">Documents printed by customers during this period will appear here automatically.</p></div>';
+    } else {
+      ovTable.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+        + filtered.slice(0, 6).map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
+        + '</tbody></table></div>';
+    }
+  }
+
+  // Print jobs table view
+  const jobsBox = $('jobs_table_box');
+  const badgeBox = $('agent_jobs_summary_badge');
+  if (badgeBox) {
+    badgeBox.innerHTML = '<div style="display:flex;gap:.6rem;flex-wrap:wrap">'
+      + '<span class="pill on">Total Earned: ₹' + (Math.round(totalRevenue * 100) / 100) + '</span>'
+      + '<span class="pill">Showing ' + filtered.length + ' jobs</span>'
+      + '<span class="pill">' + totalPages + ' pages (' + bwPages + ' B&amp;W, ' + colPages + ' Colour)</span>'
+      + '</div>';
+  }
+  if (jobsBox) {
+    if (!filtered.length) {
+      jobsBox.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs in this period</p><p style="color:var(--mute);max-width:50ch;margin:0 auto">When customers scan your counter QR and send files, they will appear here live.</p></div>';
+    } else {
+      jobsBox.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+        + filtered.map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
+        + '</tbody></table></div>';
+    }
   }
 }
+
+async function fetchJobs(){
+  try {
+    cachedAgentJobs = await api('/local/jobs');
+    if(!Array.isArray(cachedAgentJobs)) cachedAgentJobs = [];
+    renderAgentViews();
+  } catch(e) {
+    if($('jobs_table_box')) $('jobs_table_box').innerHTML = '<p class="err">' + e.message + '</p>';
+  }
+}
+
 const rjb = $('refresh_jobs_btn');
-if(rjb) rjb.onclick = loadJobs;
+if(rjb) rjb.onclick = fetchJobs;
 
 $('qrb').onclick=async()=>{const q=await api('/local/qr');$('q_shop').textContent=S.cfg.shop.name;$('q_img').src=q.img;$('qm').showModal()};
+if($('agent_ov_qr_btn')) $('agent_ov_qr_btn').onclick=()=>$('qrb').click();
 $('qc').onclick=()=>$('qm').close();
 $('pr').onclick=()=>window.print();
 $('logout').onclick=async()=>{if(confirm('Remove this key from this PC?')){await api('/local/logout',{});await boot()}};
@@ -365,9 +611,15 @@ $('logout').onclick=async()=>{if(confirm('Remove this key from this PC?')){await
 function tick(){
   if(!S||!S.activated)return;
   let d=S.cfg.expiresAt-Date.now();
-  if(d<=0){$('cd').textContent='Expired';return}
+  if(d<=0){
+    $('cd').textContent='Expired';
+    if($('agent_ov_cd')) $('agent_ov_cd').textContent='Expired';
+    return;
+  }
   const D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4),X=Math.floor(d%6e4/1e3),p=n=>String(n).padStart(2,'0');
-  $('cd').textContent=(D?D+'d ':'')+p(H)+'h '+p(M)+'m '+p(X)+'s';
+  const cdStr = (D?D+'d ':'')+p(H)+'h '+p(M)+'m '+p(X)+'s';
+  $('cd').textContent = cdStr;
+  if($('agent_ov_cd')) $('agent_ov_cd').textContent = cdStr;
 }
 
 async function boot(){
@@ -375,13 +627,14 @@ async function boot(){
   if(S.activated){
     await fillPrinters();
     fillSettings();
-    setTab('2');
+    setTab('0');
     loadRzp();
+    await fetchJobs();
   }
 }
 
 boot();
 setInterval(tick,1000);
 setInterval(()=>load().catch(()=>{}),5000);
-setInterval(()=>{ if(tab==='4') loadJobs().catch(()=>{}); },5000);
+setInterval(()=>{ if(tab==='0' || tab==='4') fetchJobs().catch(()=>{}); },5000);
 </script></body></html>
