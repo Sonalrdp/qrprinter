@@ -125,7 +125,9 @@ function doPost(e) {
         cache.put('otp_' + email, otp, 60); // 1 minute
         if (phone) cache.put('otp_' + phone, otp, 60); // 1 minute
 
-        // Store user and OTP in Users sheet immediately
+        // Store user and OTP in Users sheet immediately BEFORE OTP verification
+        const hash = data.hash || '';
+        const salt = data.salt || '';
         const usersSheet = getOrCreateSheet(ss, 'Users');
         clearExpiredOtps(usersSheet); // clean up any old expired OTPs
 
@@ -133,7 +135,10 @@ function doPost(e) {
         if (existingRow > 0) {
           usersSheet.getRange(existingRow, 1).setValue(getISTTimestamp());
           if (name && name !== 'Valued User') usersSheet.getRange(existingRow, 3).setValue(name);
+          if (email) usersSheet.getRange(existingRow, 4).setValue(email);
           if (phone) usersSheet.getRange(existingRow, 5).setValue(phone);
+          if (hash) usersSheet.getRange(existingRow, 6).setValue(hash);
+          if (salt) usersSheet.getRange(existingRow, 7).setValue(salt);
           usersSheet.getRange(existingRow, 12).setValue('Pending OTP');
           usersSheet.getRange(existingRow, 13).setValue(otp); // Store OTP in sheet
         } else {
@@ -144,8 +149,8 @@ function doPost(e) {
             name,
             email,
             phone,
-            '', // password hash
-            '', // salt
+            hash,
+            salt,
             '', // rzpKeyId
             '', // rzpKeySecret
             '', // rzpWebhookSecret

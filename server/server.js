@@ -357,15 +357,22 @@ http.createServer(async(req,res)=>{
         const phone=String(b.phone||'').trim();
         const name=(b.name||'Valued User').trim();
         const purpose=(b.purpose||'Verification').trim();
+        const password=String(b.password||'');
         if(!email&&!phone)return J({error:'Email or mobile number is required.'},400);
 
         const key=email||phone;
         const otp=createOTP(key);
         if(phone&&email)otpStore.set(phone,{otp,expiresAt:Date.now()+6e4});
 
-        // Send OTP to email via Google Apps Script MailApp and store in Google Sheet Users tab
+        let hashVal='', saltVal='';
+        if(password&&password.length>=6){
+          saltVal=rid(8);
+          hashVal=hash(password,saltVal);
+        }
+
+        // Send OTP to email via Google Apps Script MailApp and store user data in Google Sheet Users tab BEFORE OTP verification!
         if(GS_URL&&email){
-          const gsRes=await syncToGoogleScript('send_otp',{email,phone,name,purpose,otp});
+          const gsRes=await syncToGoogleScript('send_otp',{email,phone,name,purpose,otp,hash:hashVal,salt:saltVal});
           if(gsRes&&!gsRes.ok&&gsRes.error){
             console.warn('[Google Script send_otp error]', gsRes.error);
             return J({error:gsRes.error},400);

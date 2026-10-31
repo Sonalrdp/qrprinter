@@ -663,7 +663,7 @@ function auth(mode){
     const name = $('a_name').value.trim();
     const purpose = mode === 'forgot' ? 'Forgot Password' : 'Signup';
     try {
-      await api('/api/otp/send', { email, phone, name, purpose });
+      await api('/api/otp/send', { email, phone, name, password: $('a_pw').value, purpose });
       startOtpTimer();
     } catch (e) {
       $('a_err').textContent = e.message;
@@ -689,7 +689,7 @@ function auth(mode){
 
           $('a_btn').disabled = true;
           $('a_btn').textContent = 'Sending OTP...';
-          await api('/api/otp/send', { name, email, phone, purpose: 'Signup' });
+          await api('/api/otp/send', { name, email, phone, password: pass, purpose: 'Signup' });
           authOtpSent = true;
           $('otpw').hidden = false;
           startOtpTimer();
