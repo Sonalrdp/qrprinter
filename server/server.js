@@ -616,6 +616,60 @@ http.createServer(async(req,res)=>{
         if(j){j.status=b.status==='printed'?'printed':'failed';save();syncToGoogleScript('update_print_job',{id:j.id,status:j.status});}
         return J({ok:1});
       }
+      if(p==='/api/agent/history'){
+        if(!ashop)return J({error:'Key not valid'},401);
+        const jobs=db.jobs.filter(j=>j.shopId===ashop.id).slice(-100).reverse().map(j=>({
+          id:j.id,
+          filename:j.filename,
+          pages:j.pages,
+          copies:(j.options&&j.options.copies)||1,
+          color:(j.options&&j.options.color)||'bw',
+          duplex:!!(j.options&&j.options.duplex),
+          amount:j.amount,
+          status:j.status,
+          createdAt:j.createdAt
+        }));
+        return J(jobs);
+      }
+      if(p==='/api/agent/rzp'&&m==='POST'){
+        if(!ashop||!ak)return J({error:'Key not valid'},401);
+        const own=db.users.find(x=>x.id===ak.userId);
+        const action=b.action||'get';
+        if(action==='reset'){
+          ashop.rzpKeyId='';
+          ashop.rzpKeySecret='';
+          ashop.rzpWebhookSecret='';
+          if(own){
+            own.rzpKeyId='';
+            own.rzpKeySecret='';
+            own.rzpWebhookSecret='';
+            syncToGoogleScript('update_rzp',{email:own.email,rzpKeyId:'',rzpKeySecret:'',rzpWebhookSecret:''});
+          }
+          save();
+          return J({ok:1,keyId:'',hasSecret:false,webhookSecret:'',isConfigured:false,message:'Razorpay credentials reset successfully.'});
+        }
+        if(action==='update'){
+          if(b.keyId!==undefined)ashop.rzpKeyId=(b.keyId||'').trim();
+          if(b.keySecret)ashop.rzpKeySecret=(b.keySecret||'').trim();
+          if(b.webhookSecret!==undefined)ashop.rzpWebhookSecret=(b.webhookSecret||'').trim();
+          if(own){
+            if(b.keyId!==undefined)own.rzpKeyId=(b.keyId||'').trim();
+            if(b.keySecret)own.rzpKeySecret=(b.keySecret||'').trim();
+            if(b.webhookSecret!==undefined)own.rzpWebhookSecret=(b.webhookSecret||'').trim();
+            syncToGoogleScript('update_rzp',{email:own.email,rzpKeyId:own.rzpKeyId,rzpKeySecret:own.rzpKeySecret,rzpWebhookSecret:own.rzpWebhookSecret});
+          }
+          save();
+          const kid=ashop.rzpKeyId||(own?own.rzpKeyId:'')||'';
+          const hasSec=!!(ashop.rzpKeySecret||(own&&own.rzpKeySecret));
+          const wh=ashop.rzpWebhookSecret||(own?own.rzpWebhookSecret:'')||'';
+          return J({ok:1,keyId:kid,hasSecret:hasSec,webhookSecret:wh,isConfigured:!!(kid&&hasSec)});
+        }
+        // action === 'get'
+        const kid=ashop.rzpKeyId||(own?own.rzpKeyId:'')||'';
+        const hasSec=!!(ashop.rzpKeySecret||(own&&own.rzpKeySecret));
+        const wh=ashop.rzpWebhookSecret||(own?own.rzpWebhookSecret:'')||'';
+        return J({ok:1,keyId:kid,hasSecret:hasSec,webhookSecret:wh,isConfigured:!!(kid&&hasSec)});
+      }
       if((r=p.match(/^\/api\/shop\/(\w+)$/))){const s=db.shops.find(x=>x.id===r[1]);return s?J(pub(s)):J({error:'Shop not found'},404)}
       if((r=p.match(/^\/api\/shop\/(\w+)\/jobs$/))&&m==='POST'){
         const s=db.shops.find(x=>x.id===r[1]);

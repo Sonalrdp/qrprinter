@@ -63,6 +63,23 @@ http.createServer(async(req,res)=>{
       const b=await readBody(req);const s=await remote('/api/agent/settings','POST',{key:cfg.key,...b});
       cfg.shop=s;saveCfg();return J({ok:1});
     }
+    if(p==='/local/jobs'){
+      if(!cfg.key)return J([]);
+      const jobs=await remote('/api/agent/history?key='+encodeURIComponent(cfg.key));
+      return J(jobs);
+    }
+    if(p==='/local/rzp'){
+      if(!cfg.key)return J({error:'Not activated'},400);
+      const b=await readBody(req);
+      const resData=await remote('/api/agent/rzp','POST',{key:cfg.key,...b});
+      if(cfg.shop){
+        cfg.shop.rzpKeyId=resData.keyId||'';
+        cfg.shop.hasRzpSecret=resData.hasSecret||false;
+        cfg.shop.rzpWebhookSecret=resData.webhookSecret||'';
+        saveCfg();
+      }
+      return J(resData);
+    }
     if(p==='/local/qr'){
       const url=cfg.serverUrl+'/?shopId='+cfg.shop.id;
       return J({url,img:await QR.toDataURL(url,{width:700,margin:1,errorCorrectionLevel:'M'})});

@@ -21,19 +21,19 @@ label{display:block;font-weight:600;margin:.9rem 0 .3rem}
 .who small,.kv small{display:block;color:var(--mute);font-size:.8rem;line-height:1.2}
 .kv b{font-size:1.3rem;font-variant-numeric:tabular-nums}
 .qrb{width:46px;height:46px;border-radius:10px;border:1.5px solid var(--ink);background:#fff;cursor:pointer;display:grid;place-items:center}.qrb:hover{background:var(--dim)}
-.main{max-width:900px;margin:0 auto;padding:1.6rem}
-.tabs{display:flex;gap:.5rem;margin-bottom:1.2rem}
+.main{max-width:920px;margin:0 auto;padding:1.6rem}
+.tabs{display:flex;gap:.5rem;margin-bottom:1.4rem;flex-wrap:wrap}
 .tab{padding:.55rem 1.1rem;border-radius:999px;border:1.5px solid var(--ink);background:transparent;cursor:pointer}
 .tab[aria-selected=true]{background:var(--ink);color:#fff}
 .panel{display:none}.panel.on{display:block}
-.panel h2{font-size:1.9rem;margin-bottom:.2rem}.panel>p{color:var(--mute);margin-bottom:.8rem}
+.panel h2{font-size:1.9rem;margin-bottom:.2rem}.panel>p{color:var(--mute);margin-bottom:1.2rem}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
 .mode{border:1.5px solid var(--line);border-radius:12px;padding:1rem;cursor:pointer;background:#fff}
 .mode input{width:auto;margin-right:.5rem}.mode.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .mode b{display:block}.mode span{color:var(--mute);font-size:.9rem}
-.row{display:flex;gap:.8rem;margin-top:1.4rem;align-items:center}
-.ok{color:#2E7D4F}
+.row{display:flex;gap:.8rem;margin-top:1.4rem;align-items:center;flex-wrap:wrap}
+.ok{color:#2E7D4F;font-weight:500}
 .log{margin-top:2.2rem;border-top:1px solid var(--line);padding-top:1rem;color:var(--mute);font-size:.88rem}
 .log div{padding:.15rem 0}
 dialog{border:0;border-radius:14px;padding:1.6rem;background:var(--paper);max-width:94vw}
@@ -42,6 +42,16 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
 .sheet h3{font-size:1.7rem;line-height:1}.sheet small{color:var(--mute)}
 .sheet img{width:80%;margin:auto}.sheet b.h{font-size:1.3rem;line-height:1.1}.sheet b.h span{color:var(--mag)}
 .acts{display:flex;gap:.7rem;justify-content:center}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem;background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid var(--line)}
+th{text-align:left;font-weight:600;color:var(--mute);padding:.7rem .85rem;border-bottom:1.5px solid var(--ink);background:#fff;white-space:nowrap}
+td{padding:.75rem .85rem;border-bottom:1px solid var(--line);vertical-align:middle}
+td code{font:600 .88rem Consolas,"Courier New",monospace}
+.pill{display:inline-block;padding:.2rem .75rem;border-radius:999px;font-size:.8rem;background:var(--line);color:var(--ink);font-weight:600}
+.pill.on{background:#E6F4EA;color:#137333}
+.pill.off{background:#FCE8E6;color:#C5221F}
+
 @page{size:A4;margin:0}
 @media print{
   body *{visibility:hidden}
@@ -69,8 +79,14 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
     <button class="qrb" id="qrb" aria-label="Show QR code for printing"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#181B26" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3h-3z"/></svg></button>
   </div>
   <div class="main">
-    <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="1">1. Printers</button><button class="tab" role="tab" data-t="2">2. Page settings</button></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-t="1">1. Printers</button>
+      <button class="tab" role="tab" data-t="2">2. Page settings</button>
+      <button class="tab" role="tab" data-t="3">3. Payment gateway</button>
+      <button class="tab" role="tab" data-t="4">4. Print jobs</button>
+    </div>
 
+    <!-- Panel 1: Printers -->
     <div class="panel" id="p1">
       <h2>Choose your printers</h2><p>Pick which printer handles each kind of job. Leave a slot empty if you don't have that printer.</p>
       <div class="g2">
@@ -82,6 +98,7 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
       <div class="row"><button class="btn" data-go="2">Next: page settings</button><button class="btn ghost" id="refresh">Refresh printer list</button></div>
     </div>
 
+    <!-- Panel 2: Page settings (Cleaned: no Razorpay fields here) -->
     <div class="panel" id="p2">
       <h2>Page settings</h2><p>Decide how much your customers can change.</p>
       <div class="modes">
@@ -94,23 +111,84 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
         <div><label for="d_duplex">Sides</label><select id="d_duplex"><option value="0">One side</option><option value="1">Both sides</option></select></div>
         <div><label for="d_range">Pages (blank = all)</label><input id="d_range" placeholder="e.g. 1-3,5"></div>
       </div>
-      <h3 style="margin-top:1.6rem">Print rates &amp; Payment</h3>
+      <h3 style="margin-top:1.6rem">Print rates</h3>
       <div class="g2">
         <div><label for="r_bw">Price per page, black &amp; white (₹)</label><input id="r_bw" type="number" min="0" step="0.5"></div>
         <div><label for="r_color">Price per page, colour (₹)</label><input id="r_color" type="number" min="0" step="0.5"></div>
-        <div><label for="rzp_id">Your Razorpay Key ID</label><input id="rzp_id" placeholder="rzp_live_... or rzp_test_..."></div>
-        <div><label for="rzp_sec">Your Razorpay Key Secret</label><input id="rzp_sec" type="password" placeholder="Leave blank to keep current secret"></div>
       </div>
-      <div style="margin-top:0.9rem;padding:0.75rem 1rem;background:#fff;border:1.5px solid var(--line);border-radius:10px;font-size:0.88rem;color:var(--mute)">
-        <b style="color:var(--ink);display:block;margin-bottom:0.25rem">Direct Razorpay Collection:</b>
-        Customer print money goes 100% directly to your own Razorpay account.
-        <div style="margin-top:0.35rem">
-          <a href="https://dashboard.razorpay.com/signin" target="_blank" style="color:var(--mag);font-weight:600;margin-right:1.2rem">1. Log in / Sign up &rarr;</a>
-          <a href="https://dashboard.razorpay.com/app/keys" target="_blank" style="color:var(--mag);font-weight:600">2. Get API Keys &rarr;</a>
+      <div class="row" style="margin-top:1.6rem"><button class="btn" id="save">Save page settings</button><span id="saved" class="ok"></span><span class="err" id="serr"></span></div>
+    </div>
+
+    <!-- Panel 3: Payment gateway (Fetched from website account with edit & reset) -->
+    <div class="panel" id="p3">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:.8rem">
+        <h2 style="margin-bottom:0">Payment gateway</h2>
+        <span id="rzp_badge" class="pill">Checking...</span>
+      </div>
+      <p style="color:var(--mute);margin-bottom:1.5rem">Credentials fetched automatically from your website account. Customer print payments go 100% directly to your own Razorpay account.</p>
+
+      <div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:1.4rem;margin-bottom:1.4rem">
+        <div class="g2" style="margin-bottom:1.2rem">
+          <div>
+            <label style="color:var(--mute);font-size:.85rem;display:block;margin-bottom:.25rem">RAZORPAY KEY ID</label>
+            <code id="disp_rzp_id" style="font-family:Consolas,monospace;font-size:1.05rem;font-weight:600;display:block">–</code>
+          </div>
+          <div>
+            <label style="color:var(--mute);font-size:.85rem;display:block;margin-bottom:.25rem">RAZORPAY KEY SECRET</label>
+            <code id="disp_rzp_sec" style="font-family:Consolas,monospace;font-size:1.05rem;color:var(--ink);display:block">–</code>
+          </div>
+        </div>
+
+        <div style="margin-bottom:1.2rem">
+          <label style="color:var(--mute);font-size:.85rem;display:block;margin-bottom:.25rem">WEBHOOK SECRET</label>
+          <code id="disp_rzp_wh" style="font-family:Consolas,monospace;font-size:.95rem;color:var(--ink);display:block">–</code>
+        </div>
+
+        <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--line)">
+          <button class="btn ghost" id="btn_toggle_edit_rzp" style="padding:.5rem 1rem">Edit / Update credentials</button>
+          <button class="btn ghost" id="btn_reset_rzp" style="padding:.5rem 1rem;color:#C5221F;border-color:#FCE8E6">Reset / Disconnect keys</button>
+          <a class="btn ghost" id="btn_open_web_rzp" href="#" target="_blank" style="padding:.5rem 1rem;text-decoration:none;margin-left:auto">Open website dashboard &nearr;</a>
         </div>
       </div>
-      <div class="row"><button class="btn" id="save">Save settings</button><span id="saved" class="ok"></span><span class="err" id="serr"></span></div>
+
+      <!-- Edit Box (revealed when user clicks Edit) -->
+      <div id="rzp_edit_box" style="background:#fff;border:1.5px solid var(--ink);border-radius:12px;padding:1.4rem;margin-bottom:1.4rem" hidden>
+        <h3 style="margin-bottom:.6rem">Edit credentials</h3>
+        <p style="font-size:.9rem;color:var(--mute);margin-bottom:1rem">Changes or resets here automatically sync to your user account, shop, and Google Sheet.</p>
+        <div class="g2">
+          <div><label for="edit_rzp_id">New Key ID</label><input id="edit_rzp_id" placeholder="rzp_live_... or rzp_test_..."></div>
+          <div><label for="edit_rzp_sec">New Key Secret</label><input id="edit_rzp_sec" type="password" placeholder="Enter Key Secret"></div>
+        </div>
+        <div>
+          <label for="edit_rzp_wh">Webhook Secret <small style="font-weight:normal;color:var(--mute)">(Optional)</small></label>
+          <input id="edit_rzp_wh" placeholder="Secret configured in Razorpay webhook">
+        </div>
+        <div class="row" style="margin-top:1.2rem">
+          <button class="btn" id="btn_save_rzp_edit">Save across all places</button>
+          <button class="btn ghost" id="btn_cancel_rzp_edit">Cancel</button>
+          <span class="ok" id="rzp_edit_ok"></span>
+          <span class="err" id="rzp_edit_err"></span>
+        </div>
+      </div>
+
+      <div style="padding:1rem 1.2rem;background:#F1F2EE;border-radius:10px;font-size:.88rem;color:var(--mute)">
+        <b style="color:var(--ink);display:block;margin-bottom:.3rem">Direct Razorpay Collection</b>
+        When connected, all money paid by customers at your counter goes 100% directly into your personal Razorpay account.
+      </div>
     </div>
+
+    <!-- Panel 4: Print jobs -->
+    <div class="panel" id="p4">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem">
+        <div>
+          <h2 style="margin-bottom:.2rem">Customer print jobs</h2>
+          <p style="margin-bottom:0;color:var(--mute)">Live list of documents uploaded and printed at your shop.</p>
+        </div>
+        <button class="btn ghost" id="refresh_jobs_btn" style="padding:.5rem 1rem">↻ Refresh list</button>
+      </div>
+      <div id="jobs_table_box"></div>
+    </div>
+
     <div class="log" id="log"></div>
     <div class="row"><button class="btn ghost" id="logout">Use a different key</button></div>
   </div>
@@ -120,8 +198,9 @@ dialog::backdrop{background:rgba(24,27,38,.6)}
 <div class="acts"><button class="btn" id="pr">Print A4 page</button><button class="btn ghost" id="qc">Close</button></div></dialog>
 
 <script>
-const $=id=>document.getElementById(id);let S=null,printers=[],tab='1';
+const $=id=>document.getElementById(id);let S=null,printers=[],tab='2';
 const api=async(p,b)=>{const r=await fetch(p,b?{method:'POST',body:JSON.stringify(b)}:{});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');return j};
+
 async function load(){
   S=await api('/local/state');
   $('act').hidden=S.activated;$('app').hidden=!S.activated;
@@ -129,44 +208,180 @@ async function load(){
   const c=S.cfg;$('uname').textContent=c.user.name;$('uemail').textContent=c.user.email;$('av').textContent=c.user.name.slice(0,2).toUpperCase();$('plan').textContent=c.plan;
   $('log').innerHTML='<b>Activity</b>'+(S.log.length?S.log.map(l=>'<div>'+l.t+'  '+l.m.replace(/</g,'&lt;')+'</div>').join(''):'<div>Waiting for print jobs.</div>');
 }
+
 async function fillPrinters(){
   printers=await api('/local/printers');
   ['bw','color','duplex','photo'].forEach(k=>{const el=$('s_'+k),cur=S.cfg.shop.slots[k]||'';
     el.innerHTML='<option value="">Not set</option>'+printers.map(p=>'<option'+(p===cur?' selected':'')+'>'+p.replace(/</g,'&lt;')+'</option>').join('')});
 }
+
 function fillSettings(){
   const s=S.cfg.shop;document.querySelector('input[name=mode][value='+s.mode+']').checked=true;modeUI();
   $('d_color').value=s.defaults.color;$('d_copies').value=s.defaults.copies;$('d_duplex').value=s.defaults.duplex?'1':'0';$('d_range').value=s.defaults.range||'';
   $('r_bw').value=s.rates.bw;$('r_color').value=s.rates.color;
-  if($('rzp_id'))$('rzp_id').value=s.rzpKeyId||'';
-  if($('rzp_sec')){$('rzp_sec').value='';$('rzp_sec').placeholder=s.hasRzpSecret?'•••••••••••••••• (Secret saved)':'Enter Key Secret';}
 }
+
 function modeUI(){const v=document.querySelector('input[name=mode]:checked').value;$('m0').classList.toggle('sel',v==='default');$('m1').classList.toggle('sel',v==='locked')}
-function setTab(t){tab=t;['1','2'].forEach(x=>{$('p'+x).classList.toggle('on',x===t);document.querySelector('.tab[data-t="'+x+'"]').setAttribute('aria-selected',x===t)})}
+
+function setTab(t){
+  tab=t;
+  ['1','2','3','4'].forEach(x=>{
+    if($('p'+x))$('p'+x).classList.toggle('on',x===t);
+    const tb=document.querySelector('.tab[data-t="'+x+'"]');
+    if(tb)tb.setAttribute('aria-selected',x===t);
+  });
+  if(t==='3')loadRzp();
+  if(t==='4')loadJobs();
+}
+
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>setTab(b.dataset.go));
 document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=modeUI);
 $('refresh').onclick=fillPrinters;
-$('abtn').onclick=async()=>{$('aerr').textContent='';try{await api('/local/activate',{serverUrl:$('srv').value.trim(),key:$('key').value.trim()});await boot()}catch(e){$('aerr').textContent=e.message}};
+
+$('abtn').onclick=async()=>{
+  $('aerr').textContent='';
+  try{
+    await api('/local/activate',{serverUrl:$('srv').value.trim(),key:$('key').value.trim()});
+    await boot();
+  }catch(e){
+    $('aerr').textContent=e.message;
+  }
+};
+
 $('save').onclick=async()=>{
   $('serr').textContent='';$('saved').textContent='';
-  const rzpId=$('rzp_id')?$('rzp_id').value.trim():'';
-  const rzpSec=$('rzp_sec')?$('rzp_sec').value.trim():'';
-  try{await api('/local/settings',{
-    mode:document.querySelector('input[name=mode]:checked').value,
-    rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
-    defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
-    slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value},
-    rzpKeyId:rzpId,
-    ...(rzpSec?{rzpKeySecret:rzpSec}:{})});
-    $('saved').textContent='Saved. Your QR page is ready.';await load()}catch(e){$('serr').textContent=e.message}
+  try{
+    await api('/local/settings',{
+      mode:document.querySelector('input[name=mode]:checked').value,
+      rates:{bw:+$('r_bw').value||0,color:+$('r_color').value||0},
+      defaults:{color:$('d_color').value,copies:Math.max(1,+$('d_copies').value||1),duplex:$('d_duplex').value==='1',range:$('d_range').value.trim()},
+      slots:{bw:$('s_bw').value,color:$('s_color').value,duplex:$('s_duplex').value,photo:$('s_photo').value}
+    });
+    $('saved').textContent='Saved. Page settings updated.';
+    await load();
+  }catch(e){
+    $('serr').textContent=e.message;
+  }
 };
+
+/* ---- Payment Gateway tab handlers ---- */
+async function loadRzp(){
+  try {
+    const r = await api('/local/rzp', { action: 'get' });
+    const badge = $('rzp_badge');
+    if(r.isConfigured){
+      badge.className = 'pill on';
+      badge.textContent = 'Active (Connected)';
+      $('disp_rzp_id').textContent = r.keyId;
+      $('disp_rzp_sec').textContent = '•••••••••••••••• (Saved on server)';
+      $('disp_rzp_wh').textContent = r.webhookSecret ? '•••••••• (Secret saved)' : 'None';
+    } else {
+      badge.className = 'pill';
+      badge.textContent = 'Setup required';
+      $('disp_rzp_id').textContent = 'Not configured';
+      $('disp_rzp_sec').textContent = 'Not configured';
+      $('disp_rzp_wh').textContent = 'None';
+    }
+    if($('btn_open_web_rzp')){
+      $('btn_open_web_rzp').href = S.cfg.serverUrl + '/#/dashboard';
+    }
+  } catch(e) {
+    console.warn('loadRzp error', e);
+  }
+}
+
+$('btn_toggle_edit_rzp').onclick = () => {
+  const b = $('rzp_edit_box');
+  b.hidden = !b.hidden;
+  if(!b.hidden) {
+    const cur = $('disp_rzp_id').textContent;
+    $('edit_rzp_id').value = cur.startsWith('rzp_') ? cur : '';
+    $('edit_rzp_sec').value = '';
+    $('edit_rzp_wh').value = '';
+    $('rzp_edit_err').textContent = '';
+    $('rzp_edit_ok').textContent = '';
+  }
+};
+
+$('btn_cancel_rzp_edit').onclick = () => { $('rzp_edit_box').hidden = true; };
+
+$('btn_save_rzp_edit').onclick = async () => {
+  $('rzp_edit_err').textContent = '';
+  $('rzp_edit_ok').textContent = 'Saving...';
+  try {
+    const kid = $('edit_rzp_id').value.trim();
+    const ksec = $('edit_rzp_sec').value.trim();
+    const kwh = $('edit_rzp_wh').value.trim();
+    await api('/local/rzp', { action: 'update', keyId: kid, keySecret: ksec, webhookSecret: kwh });
+    $('rzp_edit_ok').textContent = '✓ Saved across all places!';
+    setTimeout(() => { $('rzp_edit_box').hidden = true; loadRzp(); }, 1200);
+  } catch(e) {
+    $('rzp_edit_ok').textContent = '';
+    $('rzp_edit_err').textContent = e.message;
+  }
+};
+
+$('btn_reset_rzp').onclick = async () => {
+  if(!confirm('Reset Razorpay credentials from ALL places (this PC, website dashboard, and Google Sheet)?\n\nCustomers will not be able to pay until new keys are set.')) return;
+  try {
+    await api('/local/rzp', { action: 'reset' });
+    alert('Razorpay credentials have been reset from all places.');
+    $('rzp_edit_box').hidden = true;
+    loadRzp();
+  } catch(e) {
+    alert('Reset failed: ' + e.message);
+  }
+};
+
+/* ---- Print jobs tab handlers ---- */
+async function loadJobs(){
+  const box = $('jobs_table_box');
+  if(!box) return;
+  box.innerHTML = '<p style="color:var(--mute)">Loading print jobs...</p>';
+  try {
+    const jobs = await api('/local/jobs');
+    if(!jobs || !jobs.length){
+      box.innerHTML = '<div style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:2.5rem 1.5rem;text-align:center"><p style="font-weight:600;font-size:1.1rem;margin-bottom:0.4rem">No print jobs yet</p><p style="color:var(--mute);max-width:50ch;margin:0 auto">When customers scan your counter QR and send files, they will appear here live.</p></div>';
+      return;
+    }
+    const fmt = t => t ? new Date(t).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : '–';
+    const pill = s => '<span class="pill ' + (s === 'printed' ? 'on' : s === 'failed' ? 'off' : '') + '">' + (s === 'created' ? 'Waiting for payment' : s === 'paid' ? 'Paid (queued)' : s) + '</span>';
+    box.innerHTML = '<div class="tw"><table><thead><tr><th>When</th><th>Document</th><th>Pages</th><th>Color / Mode</th><th>Amount</th><th>Status</th></tr></thead><tbody>'
+      + jobs.map(j => '<tr><td>' + fmt(j.createdAt) + '</td><td><code>' + j.filename.replace(/[<>&"]/g,'') + '</code></td><td>' + j.pages + ' pg &times; ' + j.copies + '</td><td>' + (j.color === 'col' ? 'Colour' : 'B&amp;W') + (j.duplex ? ' (Duplex)' : '') + '</td><td><b>₹' + j.amount + '</b></td><td>' + pill(j.status) + '</td></tr>').join('')
+      + '</tbody></table></div>';
+  } catch(e) {
+    box.innerHTML = '<p class="err">' + e.message + '</p>';
+  }
+}
+const rjb = $('refresh_jobs_btn');
+if(rjb) rjb.onclick = loadJobs;
+
 $('qrb').onclick=async()=>{const q=await api('/local/qr');$('q_shop').textContent=S.cfg.shop.name;$('q_img').src=q.img;$('qm').showModal()};
-$('qc').onclick=()=>$('qm').close();$('pr').onclick=()=>window.print();
+$('qc').onclick=()=>$('qm').close();
+$('pr').onclick=()=>window.print();
 $('logout').onclick=async()=>{if(confirm('Remove this key from this PC?')){await api('/local/logout',{});await boot()}};
-function tick(){if(!S||!S.activated)return;let d=S.cfg.expiresAt-Date.now();if(d<=0){$('cd').textContent='Expired';return}
+
+function tick(){
+  if(!S||!S.activated)return;
+  let d=S.cfg.expiresAt-Date.now();
+  if(d<=0){$('cd').textContent='Expired';return}
   const D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4),X=Math.floor(d%6e4/1e3),p=n=>String(n).padStart(2,'0');
-  $('cd').textContent=(D?D+'d ':'')+p(H)+'h '+p(M)+'m '+p(X)+'s'}
-async function boot(){await load();if(S.activated){await fillPrinters();fillSettings();setTab('2')}}
-boot();setInterval(tick,1000);setInterval(()=>load().catch(()=>{}),5000);
+  $('cd').textContent=(D?D+'d ':'')+p(H)+'h '+p(M)+'m '+p(X)+'s';
+}
+
+async function boot(){
+  await load();
+  if(S.activated){
+    await fillPrinters();
+    fillSettings();
+    setTab('2');
+    loadRzp();
+  }
+}
+
+boot();
+setInterval(tick,1000);
+setInterval(()=>load().catch(()=>{}),5000);
+setInterval(()=>{ if(tab==='4') loadJobs().catch(()=>{}); },5000);
 </script></body></html>
