@@ -11,7 +11,6 @@ public class PrintQRApp {
     public static void Main(string[] args) {
         try {
             ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
         } catch {}
 
         // Determine installation / application directory

@@ -25,7 +25,6 @@ public class PrintQRSetup : Form {
     public PrintQRSetup() {
         try {
             ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
         } catch {}
         InitializeUI();
         LoadConfiguredServerUrl();
@@ -35,41 +34,31 @@ public class PrintQRSetup : Form {
     public static void Main(string[] args) {
         try {
             ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
         } catch {}
 
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-
-        // Require administrator elevation to install to C:\Program Files
-        if (!IsAdministrator()) {
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = Assembly.GetExecutingAssembly().Location;
-            psi.Verb = "runas";
-            psi.UseShellExecute = true;
-            try {
-                Process.Start(psi);
-            } catch {
-                MessageBox.Show("Administrator privileges are required to install PrintQR Agent into C:\\Program Files.", "Setup", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            return;
-        }
-
         Application.Run(new PrintQRSetup());
-    }
-
-    private static bool IsAdministrator() {
-        try {
-            WindowsIdentity id = WindowsIdentity.GetCurrent();
-            WindowsPrincipal principal = new WindowsPrincipal(id);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
-        } catch {
-            return false;
-        }
     }
 
     private void LoadConfiguredServerUrl() {
         try {
+            // 1. Check server_url.txt in the same directory as this setup exe
+            string appDir = AppDomain.CurrentDomain.BaseDirectory;
+            string localTxt = Path.Combine(appDir, "server_url.txt");
+            if (File.Exists(localTxt)) {
+                string u = File.ReadAllText(localTxt).Trim();
+                if (!string.IsNullOrEmpty(u)) { serverUrl = u; return; }
+            }
+
+            // 2. Check config.json in the same directory
+            string localCfg = Path.Combine(appDir, "config.json");
+            if (File.Exists(localCfg)) {
+                string u = ExtractJsonString(File.ReadAllText(localCfg), "serverUrl");
+                if (!string.IsNullOrEmpty(u)) { serverUrl = u; return; }
+            }
+
+            // 3. Check embedded configuration marker if present
             string self = Assembly.GetExecutingAssembly().Location;
             byte[] bytes = File.ReadAllBytes(self);
             string text = System.Text.Encoding.UTF8.GetString(bytes);
@@ -80,6 +69,7 @@ public class PrintQRSetup : Form {
                 string parsedUrl = ExtractJsonString(payload, "serverUrl");
                 if (!string.IsNullOrEmpty(parsedUrl)) {
                     serverUrl = parsedUrl;
+                    return;
                 }
             }
         } catch {}

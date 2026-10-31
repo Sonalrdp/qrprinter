@@ -305,8 +305,9 @@ try{
   const setupExePath=path.join(dlDir,'PrintQR_Setup.exe');
   const {execSync}=require('child_process');
   const cscPath='C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
+  const mfPath=path.join(__dirname,'..','installer','app.manifest');
   if(fs.existsSync(cscPath)){
-    execSync(`"${cscPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${setupExePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
+    execSync(`"${cscPath}" /win32manifest:"${mfPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${setupExePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
   }
 }catch(e){}
 
@@ -322,22 +323,38 @@ http.createServer(async(req,res)=>{
         try{
           const {execSync}=require('child_process');
           const cscPath='C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
+          const mfPath=path.join(__dirname,'..','installer','app.manifest');
           if(fs.existsSync(cscPath)){
-            execSync(`"${cscPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${exePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
+            execSync(`"${cscPath}" /win32manifest:"${mfPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${exePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
             exeBuf=fs.readFileSync(exePath);
           }
         }catch(e){}
       }
       if(!exeBuf)return J({error:'Setup installer not found on server'},404);
-      const cfgMarker=Buffer.from('\n---PRINTQR_CONFIG---\n'+JSON.stringify({serverUrl:srvUrl})+'\n');
-      const fullExe=Buffer.concat([exeBuf,cfgMarker]);
       res.writeHead(200,{
-        'Content-Type':'application/vnd.microsoft.portable-executable',
+        'Content-Type':'application/octet-stream',
         'Content-Disposition':'attachment; filename="PrintQR_Setup.exe"',
-        'Content-Length':fullExe.length,
+        'Content-Length':exeBuf.length,
         'Cache-Control':'no-cache, no-store, must-revalidate'
       });
-      return res.end(fullExe);
+      return res.end(exeBuf);
+    }
+    if(p==='/downloads/PrintQR-Setup.zip'||p==='/api/download-setup-zip'){
+      const srvUrl=getPublicServerUrl(req,u);
+      const exePath=path.join(PUB,'downloads','PrintQR_Setup.exe');
+      const exeBuf=fs.existsSync(exePath)?fs.readFileSync(exePath):Buffer.alloc(0);
+      const zipFiles=[
+        {name:'PrintQR_Setup.exe',data:exeBuf},
+        {name:'server_url.txt',data:Buffer.from(srvUrl)}
+      ];
+      const zipBuf=makeZipBuffer(zipFiles);
+      res.writeHead(200,{
+        'Content-Type':'application/zip',
+        'Content-Disposition':'attachment; filename="PrintQR-Setup.zip"',
+        'Content-Length':zipBuf.length,
+        'Cache-Control':'no-cache, no-store, must-revalidate'
+      });
+      return res.end(zipBuf);
     }
     if(p==='/api/agent/version'){
       const srvUrl=getPublicServerUrl(req,u);
