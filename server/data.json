@@ -247,11 +247,13 @@
    "mode": "default",
    "upi": "",
    "rates": {
-    "bw": 2,
-    "color": 10
+    "bw": 8,
+    "color": 10,
+    "text": 8,
+    "image": 10
    },
    "defaults": {
-    "color": "bw",
+    "color": "col",
     "copies": 1,
     "duplex": false,
     "range": ""
@@ -264,7 +266,40 @@
    },
    "rzpKeyId": "",
    "rzpKeySecret": "",
-   "rzpWebhookSecret": ""
+   "rzpWebhookSecret": "",
+   "printers": [
+    {
+     "id": "bw",
+     "name": "Black & white",
+     "device": "Microsoft Print to PDF",
+     "mode": "default",
+     "defaults": {
+      "color": "bw",
+      "copies": 1,
+      "duplex": false,
+      "range": ""
+     },
+     "rateText": 2,
+     "rateImage": 4,
+     "autoPrintMinutes": 0
+    },
+    {
+     "id": "color",
+     "name": "Colour",
+     "device": "",
+     "mode": "default",
+     "defaults": {
+      "color": "col",
+      "copies": 1,
+      "duplex": false,
+      "range": ""
+     },
+     "rateText": 8,
+     "rateImage": 10,
+     "autoPrintMinutes": 5
+    }
+   ],
+   "autoPrintMinutes": 5
   },
   {
    "id": "3d37024b",
