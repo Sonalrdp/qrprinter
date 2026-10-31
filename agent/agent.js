@@ -2,6 +2,9 @@
 const http=require('http'),fs=require('fs'),os=require('os'),path=require('path'),{exec}=require('child_process');
 const QR=require('qrcode'),ptp=require('pdf-to-printer');
 const PORT=4010,DIR=path.join(process.env.APPDATA||os.homedir(),'PrintQR-Agent'),CF=path.join(DIR,'config.json');
+const isManaged=process.argv.includes('--managed');
+const startedAt=Date.now();
+let lastPingTime=Date.now();
 fs.mkdirSync(DIR,{recursive:true});
 let cfg={};try{cfg=JSON.parse(fs.readFileSync(CF))}catch(e){}
 
@@ -85,9 +88,19 @@ http.createServer(async(req,res)=>{
       return J({url,img:await QR.toDataURL(url,{width:700,margin:1,errorCorrectionLevel:'M'})});
     }
     if(p==='/local/logout'){cfg={serverUrl:cfg.serverUrl};saveCfg();return J({ok:1})}
+    if(p==='/local/ping'){lastPingTime=Date.now();return J({ok:1})}
+    if(p==='/local/shutdown'){res.writeHead(200);res.end('ok');setTimeout(()=>process.exit(0),150);return}
     res.writeHead(404);res.end();
   }catch(e){J({error:e.message},400)}
 }).listen(PORT,'127.0.0.1',()=>{
-  console.log('PrintQR agent running. Keep this window open to receive print jobs.');
-  exec('start "" msedge --app=http://127.0.0.1:'+PORT+' --window-size=1100,780',err=>{if(err)exec('start "" http://127.0.0.1:'+PORT)});
+  console.log('PrintQR agent running.');
+  if(!isManaged){
+    exec('start "" msedge --app=http://127.0.0.1:'+PORT+' --window-size=1100,780',err=>{if(err)exec('start "" http://127.0.0.1:'+PORT)});
+  }
 });
+
+setInterval(()=>{
+  if(isManaged&&(Date.now()-startedAt>20000)&&(Date.now()-lastPingTime>12000)){
+    process.exit(0);
+  }
+},4000);

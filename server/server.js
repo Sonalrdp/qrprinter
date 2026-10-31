@@ -251,14 +251,17 @@ function makeZipBuffer(files){
   return Buffer.concat([...parts,cdBuf,eocd]);
 }
 
+const AGENT_VERSION = '1.0.1';
+
 function buildAgentZip(serverUrl){
   const agentDir=path.join(__dirname,'..','agent');
   const files=[];
-  ['package.json','agent.js','ui.html','install-and-run.bat'].forEach(n=>{
+  ['package.json','agent.js','ui.html','install-and-run.bat','PrintQR.exe','version.txt'].forEach(n=>{
     const p=path.join(agentDir,n);
     if(fs.existsSync(p))files.push({name:'PrintQR-Agent/'+n,data:fs.readFileSync(p)});
   });
   files.push({name:'PrintQR-Agent/server_url.txt',data:Buffer.from(serverUrl)});
+  files.push({name:'PrintQR-Agent/version.txt',data:Buffer.from(AGENT_VERSION)});
   files.push({name:'PrintQR-Agent/config.json',data:Buffer.from(JSON.stringify({serverUrl,autoConfigured:true},null,2))});
   return makeZipBuffer(files);
 }
@@ -278,12 +281,51 @@ try{
   const dlDir=path.join(PUB,'downloads');
   fs.mkdirSync(dlDir,{recursive:true});
   fs.writeFileSync(path.join(dlDir,'PrintQR-Agent.zip'),buildAgentZip('http://localhost:'+PORT));
+  const setupExePath=path.join(dlDir,'PrintQR_Setup.exe');
+  const {execSync}=require('child_process');
+  const cscPath='C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
+  if(fs.existsSync(cscPath)){
+    execSync(`"${cscPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${setupExePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
+  }
 }catch(e){}
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://x'),p=u.pathname,m=req.method;
   const J=(o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
   try{
+    if(p==='/downloads/PrintQR_Setup.exe'||p==='/api/download-setup'||p==='/downloads/PrintQR-Setup.exe'){
+      const srvUrl=getPublicServerUrl(req,u);
+      const exePath=path.join(PUB,'downloads','PrintQR_Setup.exe');
+      let exeBuf=fs.existsSync(exePath)?fs.readFileSync(exePath):null;
+      if(!exeBuf){
+        try{
+          const {execSync}=require('child_process');
+          const cscPath='C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
+          if(fs.existsSync(cscPath)){
+            execSync(`"${cscPath}" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll /target:winexe /out:"${exePath}" "${path.join(__dirname,'..','installer','Setup.cs')}"`);
+            exeBuf=fs.readFileSync(exePath);
+          }
+        }catch(e){}
+      }
+      if(!exeBuf)return J({error:'Setup installer not found on server'},404);
+      const cfgMarker=Buffer.from('\n---PRINTQR_CONFIG---\n'+JSON.stringify({serverUrl:srvUrl})+'\n');
+      const fullExe=Buffer.concat([exeBuf,cfgMarker]);
+      res.writeHead(200,{
+        'Content-Type':'application/vnd.microsoft.portable-executable',
+        'Content-Disposition':'attachment; filename="PrintQR_Setup.exe"',
+        'Content-Length':fullExe.length,
+        'Cache-Control':'no-cache, no-store, must-revalidate'
+      });
+      return res.end(fullExe);
+    }
+    if(p==='/api/agent/version'){
+      const srvUrl=getPublicServerUrl(req,u);
+      return J({
+        version: AGENT_VERSION,
+        downloadUrl: '/downloads/PrintQR-Agent.zip',
+        serverUrl: srvUrl
+      });
+    }
     if(p==='/downloads/PrintQR-Agent.zip'||p==='/api/download-agent'){
       const srvUrl=getPublicServerUrl(req,u);
       const zipBuf=buildAgentZip(srvUrl);

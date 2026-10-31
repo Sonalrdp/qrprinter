@@ -577,8 +577,18 @@ dialog .acts{display:flex;gap:.7rem;justify-content:center}
 <div id="dash-panel-dl" hidden>
 <section class="dsec" style="margin-top:0">
   <h2>Download and install</h2>
-  <div class="dl"><a class="btn" id="dl-agent-btn" href="/downloads/PrintQR-Agent.zip" download>Download for Windows</a></div>
-  <ol class="inst"><li><b>Unzip</b> the file on your shop PC.</li><li><b>Double-click install-and-run.bat.</b> It installs what it needs and opens the app.</li><li><b>Enter your activation key</b> (server address is pre-filled automatically).</li><li><b>Choose your printers</b>, set the page settings, and save.</li><li><b>Click the QR icon</b> in the top right of the app and print the A4 page for your counter.</li></ol>
+  <div class="dl" style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap">
+    <a class="btn" id="dl-agent-btn" href="/downloads/PrintQR_Setup.exe" download="PrintQR_Setup.exe">Download PrintQR_Setup.exe</a>
+    <a class="btn ghost" href="/downloads/PrintQR-Agent.zip" download="PrintQR-Agent.zip" style="font-size:0.9rem">Download ZIP package (portable)</a>
+  </div>
+  <ol class="inst">
+    <li><b>Download PrintQR_Setup.exe</b> above and double-click to install.</li>
+    <li>It automatically fetches the latest files from this site and installs into <b>C:\Program Files\PrintQR-Agent</b>.</li>
+    <li>A <b>PrintQR Agent</b> icon will be placed directly on your Desktop.</li>
+    <li><b>Zero black CMD window:</b> It runs completely in the background and automatically closes all background processes when you close the software window.</li>
+    <li><b>Automatic updates:</b> Every time you open the Desktop app, it automatically checks for and applies new updates.</li>
+    <li><b>Enter your activation key</b> once, pick your printers, and print the counter QR standee.</li>
+  </ol>
 </section>
 </div>
 </main>
@@ -1122,7 +1132,7 @@ async function dash(){
   if(rjb) rjb.onclick = loadUserJobsAndMetrics;
 
   const dl=$('dl-agent-btn')||document.querySelector('.dl a');
-  if(dl)dl.href='/downloads/PrintQR-Agent.zip?origin='+encodeURIComponent(window.location.origin);
+  if(dl)dl.href='/downloads/PrintQR_Setup.exe?origin='+encodeURIComponent(window.location.origin);
 }
 /* ---- customer ---- */
 function rzpPay(r,done,fail,desc){

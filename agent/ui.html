@@ -637,4 +637,9 @@ boot();
 setInterval(tick,1000);
 setInterval(()=>load().catch(()=>{}),5000);
 setInterval(()=>{ if(tab==='0' || tab==='4') fetchJobs().catch(()=>{}); },5000);
+
+// Ping agent & handle graceful window close shutdown
+setInterval(()=>{ fetch('/local/ping').catch(()=>{}); },3000);
+window.addEventListener('beforeunload',()=>{ try{navigator.sendBeacon('/local/shutdown');}catch(e){} });
+window.addEventListener('pagehide',()=>{ try{navigator.sendBeacon('/local/shutdown');}catch(e){} });
 </script></body></html>
